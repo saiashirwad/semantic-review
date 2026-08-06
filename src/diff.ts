@@ -88,18 +88,22 @@ export function summarizeChange(files: DiffFile[]): string {
   return `${hunkCount} hunk${hunkCount === 1 ? "" : "s"} across ${files.length} file${files.length === 1 ? "" : "s"}`;
 }
 
-/** Whether a hunk contains the line number used by snippets/findings (new-file, or old when no new). */
+/** Finding/snippet line encoding: positive = newNo, negative = -oldNo. */
 export function hunkHasLine(hunk: Hunk, line: number): boolean {
   if (line < 0) return hunk.lines.some((l) => l.oldNo === -line);
   return hunk.lines.some((l) => l.newNo === line);
 }
 
-/** Whether any hunk line falls in [from, to] (new-file preferred, else old). */
-export function hunkHasRange(hunk: Hunk, from: number, to: number): boolean {
-  return hunk.lines.some((l) => {
+/** Lines whose preferred number (new, else old) falls in [from, to]. */
+export function linesInRange(hunk: Hunk, from: number, to: number): DiffLine[] {
+  return hunk.lines.filter((l) => {
     const no = l.newNo ?? l.oldNo;
     return no != null && no >= from && no <= to;
   });
+}
+
+export function hunkHasRange(hunk: Hunk, from: number, to: number): boolean {
+  return linesInRange(hunk, from, to).length > 0;
 }
 
 // The annotated diff we show the model: every hunk labeled with its id.

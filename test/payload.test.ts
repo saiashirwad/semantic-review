@@ -64,6 +64,31 @@ describe("buildReviewPayload", () => {
     expect(payload.results[0].analysis.findings[0].severity).toBe("major");
   });
 
+  test("binds analysis refs against the real diff", async () => {
+    const dirty: Analysis = {
+      ...analysis,
+      sections: [
+        {
+          heading: "Core",
+          intro: "The change.",
+          diagram: "",
+          snippets: [
+            { hunk_id: "h1", from: 2, to: 3, note: "" },
+            { hunk_id: "h99", from: 1, to: 1, note: "ghost" },
+          ],
+        },
+      ],
+      findings: [
+        ...analysis.findings,
+        { title: "ghost", severity: "info", hunk_id: "h99", line: null, body: "nope", recommendation: "" },
+      ],
+    };
+    const payload = await buildReviewPayload([{ backend: "test", analysis: dirty }], parseDiff(DIFF), "server");
+    const bound = payload.results[0].analysis;
+    expect(bound.sections[0].snippets.map((s) => s.hunk_id)).toEqual(["h1"]);
+    expect(bound.findings.map((f) => f.title)).toEqual(["Throws on empty"]);
+  });
+
   test("payload is JSON-serializable", async () => {
     const payload = await buildReviewPayload([{ backend: "test", analysis }], parseDiff(DIFF), "server");
     const roundTrip = JSON.parse(JSON.stringify(payload));

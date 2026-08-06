@@ -25,14 +25,29 @@ export interface HunkRef {
 
 export type FindingEntry = { finding: Finding; key: string };
 
-/** DOM anchor id for a finding location (shared by stacked findings on one line). */
-export function findingAnchorId(finding: Finding): string {
-  return finding.line == null ? `${finding.hunk_id}:hunk` : `${finding.hunk_id}:${finding.line}`;
+/** Map key for a line within a hunk: "hunk" or the signed line number string. */
+export function lineSlot(line: number | null): string {
+  return line == null ? "hunk" : String(line);
 }
 
-/** Map key for a line within a hunk: "hunk" or the signed line number string. */
-function lineSlot(line: number | null): string {
-  return line == null ? "hunk" : String(line);
+/** DOM anchor id for a finding location (shared by stacked findings on one line). */
+export function findingAnchorId(finding: Finding): string {
+  return `${finding.hunk_id}:${lineSlot(finding.line)}`;
+}
+
+/**
+ * Open findings on a payload line, using the inverted index (newNo and/or -oldNo).
+ * Positive model lines are new-file; negative are deleted old-file lines.
+ */
+export function findingsForLine(
+  bySlot: Map<string, FindingEntry[]> | undefined,
+  line: PayloadLine | undefined,
+): FindingEntry[] {
+  if (!bySlot || !line) return [];
+  const hits: FindingEntry[] = [];
+  if (line.newNo != null) hits.push(...(bySlot.get(String(line.newNo)) ?? []));
+  if (line.oldNo != null) hits.push(...(bySlot.get(String(-line.oldNo)) ?? []));
+  return hits;
 }
 
 export class ReviewState {
@@ -154,25 +169,6 @@ export class ReviewState {
       if (viewed) this.viewedHunks.add(h.id);
       else this.viewedHunks.delete(h.id);
     }
-  }
-
-  // Findings of the active result anchored to a given hunk line (or the whole
-  // hunk when lineIdx is null).
-  findingsAt(hunkId: string, lineIdx: number | null): FindingEntry[] {
-    const bySlot = this.findingsIndex.get(hunkId);
-    if (!bySlot) return [];
-    if (lineIdx == null) return bySlot.get("hunk") ?? [];
-    const line = this.hunkIndex.get(hunkId)?.hunk.lines[lineIdx];
-    if (!line) return [];
-    // Match model line encoding: positive = newNo, negative = -oldNo.
-    const hits: FindingEntry[] = [];
-    if (line.newNo != null) hits.push(...(bySlot.get(String(line.newNo)) ?? []));
-    if (line.oldNo != null) {
-      for (const h of bySlot.get(String(-line.oldNo)) ?? []) {
-        if (!hits.some((x) => x.key === h.key)) hits.push(h);
-      }
-    }
-    return hits;
   }
 
   /** Open findings whose hunk belongs to `path` and (optionally) is in `hunkIds`. */

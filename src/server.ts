@@ -1,9 +1,28 @@
 import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
 import { spawn } from "node:child_process";
-import { ReviewResultSchema, type ReviewResult } from "./review.ts";
+import { z } from "zod";
+import type { ReviewResult } from "./review.ts";
 
 const MAX_BODY = 2_000_000; // 2MB — review feedback is plaintext comments, not files
+
+// Server-only: keep zod off review.ts so the browser bundle stays lean/offline.
+const ReviewResultSchema = z.object({
+  comments: z
+    .array(
+      z.object({
+        ref: z.string(),
+        quote: z.string().optional(),
+        text: z.string(),
+        backend: z.string().optional(),
+      }),
+    )
+    .default([]),
+  overall: z.string().default(""),
+  notes: z
+    .array(z.object({ backend: z.string(), items: z.array(z.string()) }))
+    .optional(),
+});
 
 export interface ServeOpts {
   openBrowser?: boolean;
@@ -12,9 +31,7 @@ export interface ServeOpts {
 }
 
 // Serves the report on localhost and resolves when the reviewer clicks Done.
-export function serveReview(html: string, openBrowserOrOpts: boolean | ServeOpts = true): Promise<ReviewResult> {
-  const opts: ServeOpts =
-    typeof openBrowserOrOpts === "boolean" ? { openBrowser: openBrowserOrOpts } : openBrowserOrOpts;
+export function serveReview(html: string, opts: ServeOpts = {}): Promise<ReviewResult> {
   const openBrowser = opts.openBrowser ?? true;
 
   return new Promise((resolve, reject) => {

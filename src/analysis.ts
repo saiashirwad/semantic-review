@@ -119,12 +119,9 @@ export function parseAnalysis(raw: string): Analysis {
   return AnalysisInputSchema.parse(JSON.parse(extractJsonObject(raw)));
 }
 
-/** @deprecated Prefer parseAnalysis — kept as an alias for harness call sites. */
-export const extractAnalysis = parseAnalysis;
-
 /**
  * Drop or repair model refs that don't exist in the real diff so the UI never
- * shows "unknown hunk" for inventing ids. Shared by the CLI and evals.
+ * shows "unknown hunk" for inventing ids. Applied at the payload boundary.
  */
 export function bindAnalysis(analysis: Analysis, files: DiffFile[]): Analysis {
   const hunks = hunkById(files);

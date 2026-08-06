@@ -1,25 +1,18 @@
-import { z } from "zod";
+export interface ReviewComment {
+  ref: string;
+  quote?: string;
+  text: string;
+  backend?: string;
+}
 
-export const ReviewCommentSchema = z.object({
-  ref: z.string(),
-  quote: z.string().optional(),
-  text: z.string(),
-  backend: z.string().optional(),
-});
+export interface ReviewResult {
+  comments: ReviewComment[];
+  overall: string;
+  notes?: { backend: string; items: string[] }[];
+}
 
-export const ReviewResultSchema = z.object({
-  comments: z.array(ReviewCommentSchema).default([]),
-  overall: z.string().default(""),
-  notes: z
-    .array(z.object({ backend: z.string(), items: z.array(z.string()) }))
-    .optional(),
-});
-
-export type ReviewComment = z.infer<typeof ReviewCommentSchema>;
-export type ReviewResult = z.infer<typeof ReviewResultSchema>;
-
-// Kept platform-neutral (no node APIs) — the browser bundle in ui/ imports
-// this directly so exported reports can format feedback client-side.
+// Kept platform-neutral (no node APIs, no zod) — the browser bundle in ui/
+// imports this directly so exported reports can format feedback client-side.
 export function formatReview(result: ReviewResult, multiTab: boolean): string {
   const lines: string[] = [];
   const notes = result.notes ?? [];

@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { PayloadFile, PayloadHunk, PayloadLine } from "../../../src/payload.ts";
-  import { findingAnchorId, getReviewState } from "../state.svelte.ts";
+  import { findingAnchorId, findingsForLine, getReviewState } from "../state.svelte.ts";
   import Check from "./Check.svelte";
 
   interface Props {
@@ -78,8 +78,12 @@
     return line.kind === "add" ? "+" : line.kind === "del" ? "−" : " ";
   }
 
+  // One index rebuild per reactive pass; line lookups are O(1) map gets.
+  const openBySlot = $derived(review.findingsIndex.get(hunk.id));
+  const hunkFlags = $derived(openBySlot?.get("hunk") ?? []);
+
   function flagsFor(idx: number) {
-    return review.findingsAt(hunk.id, idx);
+    return findingsForLine(openBySlot, hunk.lines[idx]);
   }
 
   function openComment(line: PayloadLine, idx: number, e: MouseEvent) {
@@ -99,8 +103,6 @@
     e.preventDefault();
     review.openFinding = review.openFinding === key ? null : key;
   }
-
-  const hunkFlags = $derived(review.findingsAt(hunk.id, null));
 </script>
 
 {#snippet gutterFlag(idx: number)}

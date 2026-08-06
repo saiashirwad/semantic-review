@@ -6,7 +6,7 @@
 
 import { parseDiff, diffForModel, summarizeChange } from "./diff.ts";
 import { resolveBackends, runBackends, BACKENDS } from "./backends.ts";
-import { AnalysisInputSchema, analysisPrompt, bindAnalysis, type AnalysisResult } from "./analysis.ts";
+import { AnalysisInputSchema, analysisPrompt, type AnalysisResult } from "./analysis.ts";
 import { getGitDiff } from "./git.ts";
 import { buildReviewPayload } from "./payload.ts";
 import { loadUiAssets, renderShell } from "./shell.ts";
@@ -127,10 +127,7 @@ async function main() {
 
   let results: AnalysisResult[];
   if (analysisPath) {
-    const analysis = bindAnalysis(
-      AnalysisInputSchema.parse(JSON.parse(await readFile(analysisPath, "utf8"))),
-      files,
-    );
+    const analysis = AnalysisInputSchema.parse(JSON.parse(await readFile(analysisPath, "utf8")));
     results = [{ backend: "host", analysis }];
     console.error(`semantic-review: rendering caller analysis for ${changeSummary}…`);
   } else {
@@ -141,7 +138,6 @@ async function main() {
     );
     console.error(`semantic-review: analyzing ${changeSummary} with ${backends.map((b) => b.name).join(", ")}…`);
     results = await runBackends(backends, annotated, { model, effort });
-    results = results.map((r) => ({ ...r, analysis: bindAnalysis(r.analysis, files) }));
   }
   const [payload, assets] = await Promise.all([
     buildReviewPayload(results, files, exportPath ? "export" : "server"),
@@ -152,7 +148,7 @@ async function main() {
     console.log(await exportReview(exportPath, html));
     return;
   }
-  const review = await serveReview(html, openBrowser);
+  const review = await serveReview(html, { openBrowser });
 
   console.log(formatReview(review, results.length > 1));
 }

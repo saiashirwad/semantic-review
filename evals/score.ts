@@ -1,5 +1,5 @@
 import type { Analysis } from "../src/analysis.ts";
-import { hunkById, hunkHasLine, hunkHasRange, type DiffFile } from "../src/diff.ts";
+import { hunkById, hunkHasLine, hunkHasRange, linesInRange, type DiffFile } from "../src/diff.ts";
 
 export interface Check {
   name: string;
@@ -24,12 +24,7 @@ export function scoreAnalysis(analysis: Analysis, files: DiffFile[]): Check[] {
     const entry = hunks.get(s.hunk_id);
     if (!entry) return false;
     const count =
-      s.from == null || s.to == null
-        ? entry.hunk.lines.length
-        : entry.hunk.lines.filter((l) => {
-            const no = l.newNo ?? l.oldNo;
-            return no != null && no >= s.from! && no <= s.to!;
-          }).length;
+      s.from == null || s.to == null ? entry.hunk.lines.length : linesInRange(entry.hunk, s.from, s.to).length;
     return count > 20;
   });
 

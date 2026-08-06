@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { extractAnalysis } from "../src/analysis.ts";
+import { parseAnalysis } from "../src/analysis.ts";
 
 const VALID = JSON.stringify({
   title: "t",
@@ -16,13 +16,13 @@ const VALID = JSON.stringify({
   notes: [],
 });
 
-describe("extractAnalysis", () => {
+describe("parseAnalysis", () => {
   test("parses a bare JSON object", () => {
-    expect(extractAnalysis(VALID).title).toBe("t");
+    expect(parseAnalysis(VALID).title).toBe("t");
   });
 
   test("defaults findings to [] for pre-findings analyses", () => {
-    expect(extractAnalysis(VALID).findings).toEqual([]);
+    expect(parseAnalysis(VALID).findings).toEqual([]);
   });
 
   test("parses findings", () => {
@@ -32,7 +32,7 @@ describe("extractAnalysis", () => {
         { title: "f", severity: "major", hunk_id: "h1", line: 3, body: "b", recommendation: "r" },
       ],
     });
-    const { findings } = extractAnalysis(withFindings);
+    const { findings } = parseAnalysis(withFindings);
     expect(findings).toHaveLength(1);
     expect(findings[0].severity).toBe("major");
   });
@@ -42,22 +42,22 @@ describe("extractAnalysis", () => {
       ...JSON.parse(VALID),
       findings: [{ title: "f", severity: "catastrophic", hunk_id: "h1", line: null, body: "b", recommendation: "" }],
     });
-    expect(() => extractAnalysis(bad)).toThrow();
+    expect(() => parseAnalysis(bad)).toThrow();
   });
 
   test("strips markdown fences", () => {
-    expect(extractAnalysis("```json\n" + VALID + "\n```").title).toBe("t");
+    expect(parseAnalysis("```json\n" + VALID + "\n```").title).toBe("t");
   });
 
   test("finds the object inside surrounding prose", () => {
-    expect(extractAnalysis("Here is my analysis:\n" + VALID + "\nHope that helps!").title).toBe("t");
+    expect(parseAnalysis("Here is my analysis:\n" + VALID + "\nHope that helps!").title).toBe("t");
   });
 
   test("throws when there is no JSON at all", () => {
-    expect(() => extractAnalysis("I cannot analyze this diff.")).toThrow("no JSON object found");
+    expect(() => parseAnalysis("I cannot analyze this diff.")).toThrow("no JSON object found");
   });
 
   test("throws when the JSON does not match the schema", () => {
-    expect(() => extractAnalysis('{"title": "t"}')).toThrow();
+    expect(() => parseAnalysis('{"title": "t"}')).toThrow();
   });
 });

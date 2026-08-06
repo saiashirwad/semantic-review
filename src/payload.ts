@@ -1,5 +1,5 @@
 import { renderMermaidSVG } from "beautiful-mermaid";
-import type { AnalysisResult } from "./analysis.ts";
+import { bindAnalysis, type AnalysisResult } from "./analysis.ts";
 import type { DiffFile, DiffLine } from "./diff.ts";
 import { summarizeChange } from "./diff.ts";
 import { DIAGRAM_RENDER_OPTIONS, polishDiagramSvg } from "./diagram-theme.ts";
@@ -60,6 +60,13 @@ export async function buildReviewPayload(
   files: DiffFile[],
   mode: ReviewPayload["mode"],
 ): Promise<ReviewPayload> {
+  // Bind once at the shell boundary so every entry path (CLI, evals HTML,
+  // --analysis, vite fixture) drops invented hunk ids before the UI sees them.
+  const bound = results.map((r) => ({
+    backend: r.backend,
+    analysis: bindAnalysis(r.analysis, files),
+  }));
+
   const hl = await makeHighlighter(files);
 
   const payloadFiles: PayloadFile[] = files.map((file) => ({
@@ -78,7 +85,7 @@ export async function buildReviewPayload(
     }),
   }));
 
-  const payloadResults: PayloadResult[] = results.map((r) => ({
+  const payloadResults: PayloadResult[] = bound.map((r) => ({
     backend: r.backend,
     analysis: r.analysis,
     diagrams: {
@@ -90,7 +97,7 @@ export async function buildReviewPayload(
   return {
     version: 1,
     mode,
-    title: results[0].analysis.title,
+    title: bound[0].analysis.title,
     changeSummary: summarizeChange(files),
     totalChangedLines: payloadFiles.reduce((n, f) => n + f.adds + f.dels, 0),
     results: payloadResults,
