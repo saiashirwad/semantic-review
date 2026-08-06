@@ -15,6 +15,7 @@ jobs:
       - uses: oven-sh/setup-bun@v2
       - run: bun install --frozen-lockfile
       - run: bun test
+      - run: bun run check:ui
 
   node-package:
     runs-on: ubuntu-latest
@@ -32,5 +33,7 @@ jobs:
       - name: Test packaged executable
         run: |
           tarball=$(npm pack --silent)
+          tar -tzf "$tarball" | grep -q package/dist/ui/app.js
+          tar -tzf "$tarball" | grep -q package/dist/ui/style.css
           npm install --global "./$tarball"
           semantic-review --help

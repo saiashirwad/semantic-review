@@ -11,7 +11,8 @@ export interface ReviewResult {
   notes?: { backend: string; items: string[] }[];
 }
 
-// Kept self-contained so the same function can be embedded in exported reports.
+// Kept platform-neutral (no node APIs) — the browser bundle in ui/ imports
+// this directly so exported reports can format feedback client-side.
 export function formatReview(result: ReviewResult, multiTab: boolean): string {
   const lines: string[] = [];
   const notes = result.notes ?? [];

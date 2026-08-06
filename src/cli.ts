@@ -6,9 +6,10 @@
 
 import { parseDiff, diffForModel } from "./diff";
 import { resolveBackends, runBackends, BACKENDS } from "./backends";
-import { AnalysisSchema, analysisPrompt, type AnalysisResult } from "./analysis";
+import { AnalysisInputSchema, analysisPrompt, type AnalysisResult } from "./analysis";
 import { getGitDiff } from "./git";
-import { renderReport } from "./render";
+import { buildReviewPayload } from "./payload";
+import { loadUiAssets, renderShell } from "./shell";
 import { serveReview } from "./server";
 import { formatReview } from "./review";
 import { readFile } from "node:fs/promises";
@@ -115,7 +116,7 @@ async function main() {
 
   let results: AnalysisResult[];
   if (analysisPath) {
-    const analysis = AnalysisSchema.parse(JSON.parse(await readFile(analysisPath, "utf8")));
+    const analysis = AnalysisInputSchema.parse(JSON.parse(await readFile(analysisPath, "utf8")));
     results = [{ backend: "host", analysis }];
     console.error(`semantic-review: rendering caller analysis for ${changeSummary}…`);
   } else {
@@ -123,7 +124,8 @@ async function main() {
     console.error(`semantic-review: analyzing ${changeSummary} with ${backends.map((b) => b.name).join(", ")}…`);
     results = await runBackends(backends, annotated, { model, effort });
   }
-  const html = await renderReport(results, files, { exportMode: !!exportPath });
+  const payload = await buildReviewPayload(results, files, exportPath ? "export" : "server");
+  const html = renderShell(payload, await loadUiAssets());
   if (exportPath) {
     console.log(await exportReview(exportPath, html));
     return;

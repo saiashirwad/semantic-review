@@ -45,7 +45,9 @@ describe("formatReview", () => {
     expect(formatReview(review, false)).toContain("1. report");
   });
 
-  test("can run unchanged when embedded in an exported report", () => {
+  // The UI bundle imports formatReview directly, so it must stay free of
+  // node-only APIs. This guards that it remains platform-neutral.
+  test("is platform-neutral (no captured scope, no node APIs)", () => {
     const embedded = new Function(`return (${formatReview.toString()})`)() as typeof formatReview;
     const review = { comments: [{ ref: "report", text: "Fix this." }], overall: "" };
     expect(embedded(review, false)).toBe(formatReview(review, false));

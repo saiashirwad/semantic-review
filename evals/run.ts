@@ -10,7 +10,8 @@
 import type { Analysis } from "../src/analysis";
 import { resolveBackends, type AnalyzeOpts } from "../src/backends";
 import { diffForModel, hunkById, parseDiff, type DiffFile } from "../src/diff";
-import { renderReport } from "../src/render";
+import { buildReviewPayload } from "../src/payload";
+import { loadUiAssets, renderShell } from "../src/shell";
 
 interface Check {
   name: string;
@@ -50,6 +51,14 @@ function scoreAnalysis(analysis: Analysis, files: DiffFile[]): Check[] {
     (d) => d !== "" && !/^\s*(flowchart|graph|sequenceDiagram)/.test(d),
   );
 
+  const badFindingIds = analysis.findings.filter((f) => !hunks.has(f.hunk_id)).map((f) => f.hunk_id);
+  const missedFindingLines = analysis.findings.filter((f) => {
+    const entry = hunks.get(f.hunk_id);
+    if (!entry || f.line == null) return false;
+    return !entry.hunk.lines.some((l) => (f.line! < 0 ? l.oldNo === -f.line! : l.newNo === f.line));
+  });
+  const emptyFindings = analysis.findings.filter((f) => f.body.trim() === "" || f.title.trim() === "");
+
   return [
     { name: "hunk ids exist", pass: badIds.length === 0, detail: badIds.join(", ") },
     {
@@ -74,6 +83,13 @@ function scoreAnalysis(analysis: Analysis, files: DiffFile[]): Check[] {
       detail: `${analysis.summary.length}`,
     },
     { name: "diagrams look mermaid", pass: badDiagrams.length === 0, detail: `${badDiagrams.length} odd` },
+    { name: "finding hunk ids exist", pass: badFindingIds.length === 0, detail: badFindingIds.join(", ") },
+    {
+      name: "finding lines hit hunks",
+      pass: missedFindingLines.length === 0,
+      detail: missedFindingLines.map((f) => `${f.hunk_id}:${f.line}`).join(", "),
+    },
+    { name: "findings have substance", pass: emptyFindings.length === 0, detail: `${emptyFindings.length} empty` },
   ];
 }
 
@@ -115,7 +131,8 @@ for (const caseFile of caseFiles) {
       const modelSlug = opts.model ? `-${opts.model.replace(/[^\w.-]+/g, "-")}` : "";
       outFile = `evals/out/${caseName}.${backend.name}${modelSlug}`;
       await Bun.write(`${outFile}.json`, JSON.stringify(analysis, null, 2));
-      await Bun.write(`${outFile}.html`, await renderReport([{ backend: backend.name, analysis }], files));
+      const payload = await buildReviewPayload([{ backend: backend.name, analysis }], files, "export");
+      await Bun.write(`${outFile}.html`, renderShell(payload, await loadUiAssets()));
     } catch (e) {
       checks = [];
       error = e instanceof Error ? e.message : String(e);

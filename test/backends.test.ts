@@ -10,6 +10,7 @@ const analysis = {
   summary: "Summary",
   diagram: "",
   sections: [],
+  findings: [],
   notes: [],
 };
 
@@ -35,6 +36,7 @@ describe("API backends", () => {
     expect(body.model).toBe("gpt-test");
     expect(body.text.format.type).toBe("json_schema");
     expect(body.text.format.schema.properties.title.type).toBe("string");
+    expect(body.text.format.schema.properties.findings.type).toBe("array");
   });
 
   test("calls the Anthropic Messages API with a JSON schema", async () => {
@@ -50,5 +52,6 @@ describe("API backends", () => {
     expect(body.output_config.effort).toBe("high");
     expect(body.output_config.format.type).toBe("json_schema");
     expect(body.output_config.format.schema.properties.title.type).toBe("string");
+    expect(body.output_config.format.schema.properties.findings.type).toBe("array");
   });
 });

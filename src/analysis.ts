@@ -1,5 +1,19 @@
 import { z } from "zod";
 
+export const SEVERITIES = ["critical", "major", "minor", "info"] as const;
+
+export const FindingSchema = z.object({
+  title: z.string(),
+  severity: z.enum(SEVERITIES),
+  hunk_id: z.string(),
+  // New-file line number; negative = old-file line (deleted); null = whole hunk.
+  line: z.number().nullable(),
+  body: z.string(),
+  recommendation: z.string(),
+});
+
+export type Finding = z.infer<typeof FindingSchema>;
+
 export const AnalysisSchema = z.object({
   title: z.string(),
   summary: z.string(),
@@ -19,10 +33,17 @@ export const AnalysisSchema = z.object({
       ),
     }),
   ),
+  findings: z.array(FindingSchema),
   notes: z.array(z.string()),
 });
 
 export type Analysis = z.infer<typeof AnalysisSchema>;
+
+// Lenient variant for caller-provided JSON (--analysis files, CLI harness
+// output): analyses written before findings existed still parse.
+export const AnalysisInputSchema = AnalysisSchema.extend({
+  findings: z.array(FindingSchema).default([]),
+});
 
 // One analysis per backend; the report renders a tab per result.
 export interface AnalysisResult {
@@ -51,6 +72,9 @@ Produce a JSON object with exactly this shape:
       ]
     }
   ],
+  "findings": [
+    { "title": "short defect title", "severity": "critical|major|minor|info", "hunk_id": "h3", "line": 42, "body": "what is wrong and why", "recommendation": "concrete fix, or \\"\\"" }
+  ],
   "notes": ["risks or things a reviewer should double-check", ...]
 }
 
@@ -61,6 +85,9 @@ Rules:
 - Group by code path / concern, not by file. Order sections by importance: core change first.
 - Purely mechanical changes (renames, lockfiles, formatting) need no snippet — mention them in one sentence in an intro or the summary.
 - Prose is plain text; use backticks for identifiers. No markdown headings.
+- "findings" is for concrete defects in the change: bugs, regressions, missing error handling, security issues. Not style nits, and not restatements of notes. Empty array when the change looks correct — most changes have none.
+- Finding severity: critical = likely breaks behavior or security; major = probable bug or footgun; minor = worth fixing, not urgent; info = observation worth a look.
+- Finding "line" uses the same numbers as snippets: the new-file number, or the old-file number NEGATED for a deleted line ("-17|-code" → -17), or null to flag the whole hunk. "body" says what is wrong and why; "recommendation" gives the concrete fix ("" if none).
 - "notes" is for behavior changes, missing tests, edge cases, inconsistencies. Empty array if none.
 - Respond with ONLY the JSON object, no fences, no commentary.
 
@@ -80,5 +107,5 @@ export function extractAnalysis(raw: string): Analysis {
     if (start === -1 || end === -1) throw new Error(`no JSON object found in output:\n${raw.slice(0, 500)}`);
     text = text.slice(start, end + 1);
   }
-  return AnalysisSchema.parse(JSON.parse(text));
+  return AnalysisInputSchema.parse(JSON.parse(text));
 }

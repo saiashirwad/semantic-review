@@ -12,14 +12,14 @@ Install the bundled agent skill:
 npx skills add mikker/semantic-review
 ```
 
-An LLM reads a git diff and reorganizes it into a **narrative HTML report** — grouped by concern, not alphabetically, with the interesting excerpts inline, highlighted and commentable. When the reviewer clicks **Done**, their comments print to `stdout` as plaintext for the agent that invoked it.
+An LLM reads a git diff and reorganizes it into an **interactive review app** — grouped by concern, not alphabetically, with the interesting excerpts inline, highlighted and commentable. A findings rail lists concrete defects the analysis spotted (with severity and file:line anchors); each one can be jumped to, dismissed, or added to the review. Diffs come in unified or split view with per-file viewed tracking and progress counters. When the reviewer clicks **Done**, their comments print to `stdout` as plaintext for the agent that invoked it.
 
 ```
 agent runs `semantic-review` ──► LLM analyzes the diff ──► browser opens the report
 agent reads stdout ◄── plaintext feedback ◄── human comments, clicks Done
 ```
 
-Requires Node >= 20 (or [Bun](https://bun.sh)) and one backend: `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, or an installed `claude`, `codex`, `gemini`, or `pi` CLI.
+Requires Node >= 20 (or [Bun](https://bun.sh)) and one backend: `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, or an installed `claude`, `codex`, `gemini`, `pi`, or `opencode` CLI.
 
 ```sh
 npx semantic-review

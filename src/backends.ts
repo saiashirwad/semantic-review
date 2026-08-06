@@ -1,7 +1,7 @@
 import { z } from "zod";
-import { AnalysisSchema, analysisPrompt, extractAnalysis, type Analysis, type AnalysisResult } from "./analysis";
+import { AnalysisSchema, analysisPrompt, type Analysis, type AnalysisResult } from "./analysis";
 import type { Effort } from "./config";
-import { run } from "./proc";
+import { HARNESSES, harnessBackend } from "./harness";
 
 export interface AnalyzeOpts {
   model?: string; // passed through to the backend; each CLI has its own model names
@@ -38,28 +38,6 @@ async function postJson(url: string, headers: Record<string, string>, body: unkn
   } catch {
     throw new Error(`API returned invalid JSON: ${text.slice(0, 500)}`);
   }
-}
-
-function haveCommand(cmd: string): Promise<boolean> {
-  return run(["sh", "-c", `command -v ${cmd}`]).then(
-    ({ code }) => code === 0,
-    () => false,
-  );
-}
-
-// Agent CLIs run in non-interactive mode with the prompt on stdin and are
-// asked to print JSON only. They use whatever auth the user already has.
-// argv is built per call so --model can map to each CLI's own flag.
-function cliBackend(name: string, argv: (opts: AnalyzeOpts) => string[]): Backend {
-  return {
-    name,
-    available: () => haveCommand(argv({})[0]),
-    async analyze(annotatedDiff, opts) {
-      const { stdout, stderr, code } = await run(argv(opts), analysisPrompt(annotatedDiff));
-      if (code !== 0) throw new Error(`${name} exited ${code}: ${stderr.slice(0, 500)}`);
-      return extractAnalysis(stdout);
-    },
-  };
 }
 
 const anthropicBackend: Backend = {
@@ -109,15 +87,10 @@ const openaiBackend: Backend = {
   },
 };
 
-const modelFlag = (o: AnalyzeOpts, flag = "--model") => (o.model ? [flag, o.model] : []);
-
 export const BACKENDS: Record<string, Backend> = {
   anthropic: anthropicBackend,
   openai: openaiBackend,
-  claude: cliBackend("claude", (o) => ["claude", "-p", ...modelFlag(o)]),
-  codex: cliBackend("codex", (o) => ["codex", "exec", "--skip-git-repo-check", ...modelFlag(o, "-m"), "-"]),
-  gemini: cliBackend("gemini", (o) => ["gemini", ...modelFlag(o)]),
-  pi: cliBackend("pi", (o) => ["pi", "-p", "--no-session", "--no-tools", ...modelFlag(o)]),
+  ...Object.fromEntries(HARNESSES.map((h) => [h.name, harnessBackend(h)])),
 };
 
 export async function resolveBackends(requested: string[] | null): Promise<Backend[]> {
@@ -133,7 +106,7 @@ export async function resolveBackends(requested: string[] | null): Promise<Backe
     if (await backend.available()) return [backend];
   }
   throw new Error(
-    "no backend available: set ANTHROPIC_API_KEY or OPENAI_API_KEY, or install one of: claude, codex, gemini, pi (or pass --with)",
+    `no backend available: set ANTHROPIC_API_KEY or OPENAI_API_KEY, or install one of: ${HARNESSES.map((h) => h.name).join(", ")} (or pass --with)`,
   );
 }
 

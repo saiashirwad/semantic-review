@@ -2,7 +2,7 @@
 name: semantic-review
 description: Opens a semantic, narrative browser review of a git diff and returns the human reviewer's comments. Use after completing a substantial code change, or when the user asks for semantic-review, a narrative review, or a review of current changes.
 license: MIT
-compatibility: Requires Node.js 20+. Optional sidecars use ANTHROPIC_API_KEY, OPENAI_API_KEY, or an installed claude, codex, gemini, or pi CLI.
+compatibility: Requires Node.js 20+. Optional sidecars use ANTHROPIC_API_KEY, OPENAI_API_KEY, or an installed claude, codex, gemini, pi, or opencode CLI.
 disable-model-invocation: true
 context: fork
 background: false
@@ -18,7 +18,7 @@ Run the review from the repository root after implementation and validation are 
 When the user gives no harness or model preference, keep analysis out of the main conversation and give the analyzer no implementation history:
 
 1. If this skill is already running in a forked or subagent context, generate the analysis there using the caller-provided workflow below.
-2. Otherwise, prefer a fresh non-interactive invocation of the current harness via `--with claude`, `--with codex`, `--with gemini`, or `--with pi`. Do not pass conversation history. Skip the caller-provided workflow because the CLI handles analysis directly.
+2. Otherwise, prefer a fresh non-interactive invocation of the current harness via `--with claude`, `--with codex`, `--with gemini`, `--with pi`, or `--with opencode`. Do not pass conversation history. Skip the caller-provided workflow because the CLI handles analysis directly.
 3. If the current harness has no CLI backend, use a native isolated subagent to generate the JSON from the emitted prompt.
 4. Only generate analysis in the main hosting context when isolation is unavailable.
 
@@ -46,7 +46,7 @@ npx --yes semantic-review --with gemini --model gemini-2.5-pro
 npx --yes semantic-review --with pi --model google/gemini-2.5-pro
 ```
 
-For example, “use Claude Code with fable” means `--with claude --model fable`. The available backends are `anthropic`, `openai`, `claude`, `codex`, `gemini`, and `pi`. CLI backends reuse their existing local authentication; the API backends use `ANTHROPIC_API_KEY`/`ANTHROPIC_AUTH_TOKEN` and `OPENAI_API_KEY`. If the user names a backend without a model, leave off `--model` and let that backend choose its default.
+For example, “use Claude Code with fable” means `--with claude --model fable`. The available backends are `anthropic`, `openai`, `claude`, `codex`, `gemini`, `pi`, and `opencode` (opencode models are named `provider/model`). CLI backends reuse their existing local authentication; the API backends use `ANTHROPIC_API_KEY`/`ANTHROPIC_AUTH_TOKEN` and `OPENAI_API_KEY`. If the user names a backend without a model, leave off `--model` and let that backend choose its default.
 
 To compare harnesses, provide a comma-separated list. Do not add `--model`, because model IDs are backend-specific:
 
