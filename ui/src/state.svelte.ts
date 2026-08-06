@@ -57,6 +57,10 @@ export function findingsForLine(
   return hits;
 }
 
+export function clampLeftWidth(px: number): number {
+  return Math.round(Math.min(ReviewState.LEFT_W_MAX, Math.max(ReviewState.LEFT_W_MIN, px)));
+}
+
 export class ReviewState {
   payload: ReviewPayload;
   hunkIndex: Map<string, HunkRef>;
@@ -91,6 +95,13 @@ export class ReviewState {
     typeof window !== "undefined" ? !window.matchMedia("(max-width: 1119px)").matches : true,
   );
 
+  /** Wide layout: left rail width (Walk / Files). Drag-resizable. */
+  leftWidth = $state(280);
+
+  static readonly LEFT_W_MIN = 200;
+  static readonly LEFT_W_MAX = 520;
+  static readonly LEFT_W_DEFAULT = 280;
+
   constructor(payload: ReviewPayload) {
     this.payload = payload;
     this.hunkIndex = new Map();
@@ -101,6 +112,20 @@ export class ReviewState {
       this.walkOpen = false;
       this.diffOpen = false;
       this.reviewOpen = false;
+    }
+    if (typeof window !== "undefined") {
+      const raw = window.localStorage.getItem("semantic-review:left-width");
+      const n = raw ? Number(raw) : NaN;
+      if (Number.isFinite(n)) this.leftWidth = clampLeftWidth(n);
+    }
+  }
+
+  setLeftWidth(px: number) {
+    this.leftWidth = clampLeftWidth(px);
+    try {
+      window.localStorage.setItem("semantic-review:left-width", String(this.leftWidth));
+    } catch {
+      /* private mode / SSR */
     }
   }
 

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { getReviewState } from "../state.svelte.ts";
+  import LeftResizeHandle from "./LeftResizeHandle.svelte";
 
   const review = getReviewState();
 
@@ -228,6 +229,7 @@
       </li>
     {/each}
   </ol>
+  <LeftResizeHandle />
 </nav>
 
 <style>
@@ -238,6 +240,7 @@
     flex-direction: column;
     height: calc(100vh - var(--header-h));
     min-height: 0;
+    min-width: 0;
     overflow-y: auto;
     padding: 0;
     background: var(--bg-raised);

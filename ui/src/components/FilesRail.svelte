@@ -1,11 +1,12 @@
 <script lang="ts">
   /**
-   * Files panel — hierarchical tree with viewed checkboxes, jump, +/−, status.
-   * Pure Svelte; hard neobrutalist chrome (no third-party tree widget).
+   * Files panel — hierarchical tree with viewed checkboxes.
+   * Compresses single-child dir chains so deep paths stay readable.
    */
   import type { PayloadFile } from "../../../src/payload.ts";
   import { getReviewState } from "../state.svelte.ts";
   import Check from "./Check.svelte";
+  import LeftResizeHandle from "./LeftResizeHandle.svelte";
 
   const review = getReviewState();
   const fileCount = $derived(review.payload.files.length);
@@ -55,6 +56,20 @@
     }
   }
 
+  /** Merge `a/b/c` chains where each dir has a single dir child. */
+  function compressDir(node: DirNode): DirNode {
+    let children = node.children.map((c) => (c.kind === "dir" ? compressDir(c) : c));
+    let name = node.name;
+    let path = node.path;
+    while (children.length === 1 && children[0]!.kind === "dir") {
+      const only = children[0] as DirNode;
+      name = name ? `${name}/${only.name}` : only.name;
+      path = only.path;
+      children = only.children;
+    }
+    return { kind: "dir", name, path, children };
+  }
+
   const filtered = $derived.by(() => {
     const q = query.trim().toLowerCase();
     const files = review.payload.files;
@@ -66,10 +81,10 @@
     const root: DirNode = { kind: "dir", name: "", path: "", children: [] };
     for (const file of filtered) insertFile(root, file);
     sortNode(root);
+    root.children = root.children.map((c) => (c.kind === "dir" ? compressDir(c) : c));
     return root;
   });
 
-  /** Flat visible rows for rendering (respects collapse + filter). */
   type Row =
     | { kind: "dir"; name: string; path: string; depth: number; open: boolean }
     | { kind: "file"; name: string; file: PayloadFile; depth: number };
@@ -120,26 +135,6 @@
   function markAll(viewed: boolean) {
     for (const f of review.payload.files) review.setFileViewed(f, viewed);
   }
-
-  function dirViewedState(path: string): { all: boolean; some: boolean } {
-    const prefix = path + "/";
-    let total = 0;
-    let viewed = 0;
-    for (const f of review.payload.files) {
-      if (f.path === path || f.path.startsWith(prefix)) {
-        total++;
-        if (review.fileViewed(f)) viewed++;
-      }
-    }
-    return { all: total > 0 && viewed === total, some: viewed > 0 && viewed < total };
-  }
-
-  function markDir(path: string, viewed: boolean) {
-    const prefix = path + "/";
-    for (const f of review.payload.files) {
-      if (f.path === path || f.path.startsWith(prefix)) review.setFileViewed(f, viewed);
-    }
-  }
 </script>
 
 <aside
@@ -181,17 +176,12 @@
   <ul class="tree" aria-label="Files to review">
     {#each rows as row (row.kind === "dir" ? `d:${row.path}` : `f:${row.file.path}`)}
       {#if row.kind === "dir"}
-        {@const state = dirViewedState(row.path)}
         <li class="row dir" class:open={row.open} style:--d={row.depth}>
-          <Check
-            checked={state.all}
-            ariaLabel={state.all ? `Unmark all under ${row.path}` : `Mark all under ${row.path} viewed`}
-            onchange={() => markDir(row.path, !state.all)}
-          />
           <button
             type="button"
             class="main"
             aria-expanded={row.open}
+            title={row.path}
             onclick={() => toggleDir(row.path)}
           >
             <span class="twist" aria-hidden="true">{row.open ? "▾" : "▸"}</span>
@@ -208,12 +198,10 @@
           />
           <button type="button" class="main" title={row.file.path} onclick={() => onJump(row.file)}>
             <span class="name">{row.name}</span>
-            <span class="meta">
+            <span class="meta" aria-hidden="true">
               {#if row.file.adds > 0}<b class="add">+{row.file.adds}</b>{/if}
               {#if row.file.dels > 0}<b class="del">−{row.file.dels}</b>{/if}
-              <span class="status" data-status={row.file.status} title={row.file.status}
-                >{statusLetter(row.file)}</span
-              >
+              <span class="status" data-status={row.file.status}>{statusLetter(row.file)}</span>
             </span>
           </button>
         </li>
@@ -222,6 +210,8 @@
       <li class="empty">No matches</li>
     {/each}
   </ul>
+
+  <LeftResizeHandle />
 </aside>
 
 <style>
@@ -232,6 +222,7 @@
     flex-direction: column;
     height: calc(100vh - var(--header-h));
     min-height: 0;
+    min-width: 0;
     overflow: hidden;
     padding: 0;
     background: var(--bg-raised);
@@ -248,7 +239,7 @@
     left: 0;
     bottom: 0;
     z-index: 30;
-    width: min(320px, calc(100vw - 40px));
+    width: min(360px, calc(100vw - 40px));
     height: auto;
     padding: 0;
     background: var(--bg-raised);
@@ -344,7 +335,7 @@
   .search {
     flex: 1;
     min-width: 0;
-    height: 32px;
+    height: 30px;
     margin: 0;
     padding: 0 10px;
     border: 0;
@@ -374,7 +365,7 @@
 
   .mini {
     flex-shrink: 0;
-    height: 32px;
+    height: 30px;
     padding: 0 10px;
     border: 0;
     border-right: var(--border-w) solid var(--border);
@@ -395,27 +386,28 @@
     color: var(--accent-fg);
   }
 
-  .mini:active {
-    background: var(--accent-hover);
-  }
-
   .tree {
     flex: 1;
     min-height: 0;
     margin: 0;
-    padding: 4px 0;
+    padding: 6px 0 12px;
+    overflow-x: hidden;
     overflow-y: auto;
     list-style: none;
-    background: var(--bg-raised);
   }
 
-  /* One flat row: indent + content. No column borders. */
   .row {
     display: flex;
     align-items: center;
     gap: 6px;
-    min-height: 28px;
-    padding: 2px 10px 2px calc(10px + var(--d, 0) * 14px);
+    min-height: 26px;
+    /* Align files under dirs: check sits where dir has only twist */
+    padding: 1px 8px 1px calc(8px + var(--d, 0) * 12px);
+  }
+
+  .row.file {
+    /* file check + name align under dir name (past twist) */
+    padding-left: calc(8px + var(--d, 0) * 12px + 14px);
   }
 
   .row:hover {
@@ -423,8 +415,7 @@
   }
 
   .row.dir {
-    margin-top: 4px;
-    min-height: 26px;
+    margin-top: 2px;
   }
 
   .row.dir:first-child {
@@ -432,7 +423,7 @@
   }
 
   .row.file.viewed {
-    opacity: 0.55;
+    opacity: 0.5;
   }
 
   .row.file.viewed:hover {
@@ -443,7 +434,7 @@
     flex: 1;
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 4px;
     min-width: 0;
     min-height: 24px;
     margin: 0;
@@ -455,13 +446,18 @@
     cursor: pointer;
   }
 
+  .row.dir .main {
+    gap: 2px;
+  }
+
   .twist {
     flex-shrink: 0;
-    width: 12px;
-    color: var(--fg-muted);
+    width: 0.85em;
+    color: var(--fg-faint);
     font-size: 10px;
     font-weight: 700;
     line-height: 1;
+    text-align: left;
   }
 
   .row.dir .main:hover .twist {
@@ -483,8 +479,6 @@
     color: var(--fg-muted);
     font-size: 11px;
     font-weight: 700;
-    letter-spacing: 0.02em;
-    text-transform: lowercase;
   }
 
   .row.file.viewed .name {
@@ -499,8 +493,8 @@
   .meta {
     flex-shrink: 0;
     display: inline-flex;
-    align-items: center;
-    gap: 5px;
+    align-items: baseline;
+    gap: 4px;
     font-family: var(--font-code);
     font-size: 10px;
     font-variant-numeric: tabular-nums;
@@ -516,6 +510,7 @@
   }
 
   .status {
+    min-width: 0.7em;
     color: var(--fg-faint);
     font-weight: 700;
   }

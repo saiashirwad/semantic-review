@@ -85,6 +85,7 @@
     class:no-left={!review.leftOpen}
     class:no-review={!review.reviewOpen}
     class:drawer-open={review.drawerOpen}
+    style:--left-rail-w="{review.leftWidth}px"
   >
     <Sidebar />
     <FilesRail />
@@ -129,8 +130,8 @@
 <style>
   .layout {
     display: grid;
-    /* Left = Walk XOR Files; center reading; right Review — full bleed, zero gap */
-    grid-template-columns: 220px minmax(0, 1fr) minmax(280px, 340px);
+    /* Left = Walk XOR Files (resizable); center reading; right Review */
+    grid-template-columns: var(--left-rail-w, 280px) minmax(0, 1fr) minmax(280px, 340px);
     align-items: stretch;
     gap: 0;
     width: 100%;
@@ -142,7 +143,7 @@
     grid-template-columns: minmax(0, 1fr) minmax(280px, 340px);
   }
   .layout.no-review:not(.narrow) {
-    grid-template-columns: 220px minmax(0, 1fr);
+    grid-template-columns: var(--left-rail-w, 280px) minmax(0, 1fr);
   }
   .layout.no-left.no-review:not(.narrow),
   .layout.narrow {
