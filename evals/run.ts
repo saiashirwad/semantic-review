@@ -7,11 +7,11 @@
 //   bun evals/run.ts --model claude-sonnet-5 --effort medium
 //   bun evals/run.ts --with anthropic,codex evals/cases/tiered-report.diff
 
-import type { Analysis } from "../src/analysis";
-import { resolveBackends, type AnalyzeOpts } from "../src/backends";
-import { diffForModel, hunkById, parseDiff, type DiffFile } from "../src/diff";
-import { buildReviewPayload } from "../src/payload";
-import { loadUiAssets, renderShell } from "../src/shell";
+import type { Analysis } from "../src/analysis.ts";
+import { resolveBackends, type AnalyzeOpts } from "../src/backends.ts";
+import { diffForModel, hunkById, parseDiff, type DiffFile } from "../src/diff.ts";
+import { buildReviewPayload } from "../src/payload.ts";
+import { loadUiAssets, renderShell } from "../src/shell.ts";
 
 interface Check {
   name: string;

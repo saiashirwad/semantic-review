@@ -1,8 +1,8 @@
 import { renderMermaidSVG } from "beautiful-mermaid";
-import type { AnalysisResult } from "./analysis";
-import type { DiffFile, DiffLine } from "./diff";
-import { DIAGRAM_RENDER_OPTIONS, polishDiagramSvg } from "./diagram-theme";
-import { highlightHunk, makeHighlighter } from "./highlight";
+import type { AnalysisResult } from "./analysis.ts";
+import type { DiffFile, DiffLine } from "./diff.ts";
+import { DIAGRAM_RENDER_OPTIONS, polishDiagramSvg } from "./diagram-theme.ts";
+import { highlightHunk, makeHighlighter } from "./highlight.ts";
 
 // The single serializable object crossing the server/client boundary,
 // embedded in the HTML shell as window.__REVIEW_DATA__ and consumed by the
@@ -13,7 +13,7 @@ export interface PayloadLine {
   oldNo: number | null;
   newNo: number | null;
   text: string;
-  html: string; // shiki dual-theme token spans, safe for innerHTML
+  html: string; // shiki token spans, safe for innerHTML
 }
 
 export interface PayloadHunk {

@@ -4,17 +4,17 @@
 // narrative report, serves it for human review, and prints the feedback to
 // stdout when the reviewer clicks Done.
 
-import { parseDiff, diffForModel } from "./diff";
-import { resolveBackends, runBackends, BACKENDS } from "./backends";
-import { AnalysisInputSchema, analysisPrompt, type AnalysisResult } from "./analysis";
-import { getGitDiff } from "./git";
-import { buildReviewPayload } from "./payload";
-import { loadUiAssets, renderShell } from "./shell";
-import { serveReview } from "./server";
-import { formatReview } from "./review";
+import { parseDiff, diffForModel } from "./diff.ts";
+import { resolveBackends, runBackends, BACKENDS } from "./backends.ts";
+import { AnalysisInputSchema, analysisPrompt, type AnalysisResult } from "./analysis.ts";
+import { getGitDiff } from "./git.ts";
+import { buildReviewPayload } from "./payload.ts";
+import { loadUiAssets, renderShell } from "./shell.ts";
+import { serveReview } from "./server.ts";
+import { formatReview } from "./review.ts";
 import { readFile } from "node:fs/promises";
-import { configuredBackends, EFFORTS, isEffort, loadConfig, type Effort } from "./config";
-import { exportReview } from "./export";
+import { configuredBackends, EFFORTS, isEffort, loadConfig, type Effort } from "./config.ts";
+import { exportReview } from "./export.ts";
 
 const USAGE = `usage: semantic-review [options] [git diff args...]
 

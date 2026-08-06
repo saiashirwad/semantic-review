@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { getReviewState } from "../state.svelte";
+  import { getReviewState } from "../state.svelte.ts";
   import Check from "./Check.svelte";
   import Prose from "./Prose.svelte";
 

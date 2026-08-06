@@ -1,6 +1,6 @@
-import { analysisPrompt, extractAnalysis } from "./analysis";
-import type { AnalyzeOpts, Backend } from "./backends";
-import { run } from "./proc";
+import { analysisPrompt, extractAnalysis } from "./analysis.ts";
+import type { AnalyzeOpts, Backend } from "./backends.ts";
+import { run } from "./proc.ts";
 
 // A harness is a coding-agent CLI used as a one-shot analyzer: it gets the
 // analysis prompt, prints JSON, and exits. It uses whatever auth the user

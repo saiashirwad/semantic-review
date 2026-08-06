@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
-import { HARNESSES, harnessBackend, type HarnessDefinition } from "../src/harness";
-import { BACKENDS } from "../src/backends";
-import type { RunResult } from "../src/proc";
+import { HARNESSES, harnessBackend, type HarnessDefinition } from "../src/harness.ts";
+import { BACKENDS } from "../src/backends.ts";
+import type { RunResult } from "../src/proc.ts";
 
 const ANALYSIS = JSON.stringify({
   title: "t",

@@ -1,4 +1,4 @@
-import { run, type RunResult } from "./proc";
+import { run, type RunResult } from "./proc.ts";
 
 type Runner = (argv: string[]) => Promise<RunResult>;
 

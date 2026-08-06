@@ -5,7 +5,7 @@ import {
   rowVisible,
   POPOVER_EDGE,
   POPOVER_MIN_CARD,
-} from "../ui/src/popover-place";
+} from "../ui/src/popover-place.ts";
 
 describe("popover-place", () => {
   test("headerOffsetPx falls back when --header-h is missing", () => {

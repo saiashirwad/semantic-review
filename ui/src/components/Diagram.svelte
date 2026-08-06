@@ -14,13 +14,13 @@
    * Soft graphite edges inside; white nodes for contrast.
    */
   .diagram {
-    --d-bg: #faf8f4;
+    --d-bg: var(--diagram-bg);
     --d-fg: var(--fg);
-    --d-line: #9a948a;
+    --d-line: var(--diagram-line);
     --d-accent: var(--accent);
     --d-muted: var(--fg-faint);
-    --d-surface: #ffffff;
-    --d-border: #2a2a2a;
+    --d-surface: var(--bg-raised);
+    --d-border: var(--diagram-border);
 
     display: flex;
     justify-content: center;
@@ -28,7 +28,7 @@
     padding: var(--space-5) var(--space-4);
     overflow: auto;
     border: var(--border-w) solid var(--border);
-    background: #faf8f4;
+    background: var(--diagram-bg);
     box-shadow: var(--shadow-card);
   }
 

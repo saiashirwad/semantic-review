@@ -1,8 +1,8 @@
 import { getContext, setContext, tick } from "svelte";
 import { SvelteSet } from "svelte/reactivity";
-import type { Finding } from "../../src/analysis";
-import type { PayloadFile, PayloadHunk, ReviewPayload } from "../../src/payload";
-import { formatReview, type ReviewComment, type ReviewResult } from "../../src/review";
+import type { Finding } from "../../src/analysis.ts";
+import type { PayloadFile, PayloadHunk, PayloadLine, ReviewPayload } from "../../src/payload.ts";
+import { formatReview, type ReviewComment, type ReviewResult } from "../../src/review.ts";
 
 export const SEVERITY_ORDER = ["critical", "major", "minor", "info"] as const;
 
@@ -156,6 +156,18 @@ export class ReviewState {
     if (!entry || finding.line == null) return null;
     const lineNo = finding.line;
     return entry.hunk.lines.find((l) => (lineNo < 0 ? l.oldNo === -lineNo : l.newNo === lineNo)) ?? null;
+  }
+
+  /** Resolve a payload line from DOM anchors (`data-hunk` + `data-idx`). */
+  lineAt(hunkId: string, idx: number): PayloadLine | null {
+    return this.hunkIndex.get(hunkId)?.hunk.lines[idx] ?? null;
+  }
+
+  refForLine(hunkId: string, idx: number): string {
+    const entry = this.hunkIndex.get(hunkId);
+    const line = entry?.hunk.lines[idx];
+    if (!entry || !line) return "report";
+    return line.newNo != null ? `${entry.file.path}:${line.newNo}` : `${entry.file.path}:${line.oldNo} (old)`;
   }
 
   resolveFinding(key: string) {

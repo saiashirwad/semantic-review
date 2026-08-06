@@ -1,6 +1,6 @@
 <script lang="ts">
-  import type { Analysis } from "../../../src/analysis";
-  import { getReviewState } from "../state.svelte";
+  import type { Analysis } from "../../../src/analysis.ts";
+  import { getReviewState } from "../state.svelte.ts";
   import DiffView from "./DiffView.svelte";
   import Diagram from "./Diagram.svelte";
   import Prose from "./Prose.svelte";

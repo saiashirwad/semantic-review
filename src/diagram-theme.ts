@@ -3,8 +3,9 @@ import type { RenderOptions } from "beautiful-mermaid";
 /**
  * Mermaid theme for the neobrutalist review UI.
  *
- * Color aliases (--d-*) are defined on `.diagram` in the UI so we never
- * write circular `--fg: var(--fg)` onto the SVG.
+ * Color aliases (--d-*) are defined on `.diagram` in the UI (tokens from
+ * `palette.ts` via app.css) so we never write circular `--fg: var(--fg)`
+ * onto the SVG.
  *
  * Keep polish minimal: aggressive stroke/marker rewrites distorted
  * arrowheads and made edges look broken.

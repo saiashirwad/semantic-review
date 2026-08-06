@@ -1,8 +1,14 @@
-import { createHighlighter, bundledLanguages, type Highlighter } from "shiki";
-import type { DiffFile, Hunk } from "./diff";
-import { CODE_THEME_NAME, neobrutalTheme } from "./code-theme";
+import {
+  createHighlighter,
+  bundledLanguages,
+  type BundledLanguage,
+  type Highlighter,
+  type ThemedToken,
+} from "shiki";
+import type { DiffFile, Hunk } from "./diff.ts";
+import { CODE_THEME_NAME, neobrutalTheme } from "./code-theme.ts";
 
-const LANG_BY_EXT: Record<string, string> = {
+const LANG_BY_EXT: Record<string, BundledLanguage> = {
   ts: "typescript", tsx: "tsx", js: "javascript", jsx: "jsx", mjs: "javascript", cjs: "javascript",
   rb: "ruby", py: "python", go: "go", rs: "rust", java: "java", kt: "kotlin", swift: "swift",
   c: "c", h: "c", cc: "cpp", cpp: "cpp", hpp: "cpp", cs: "csharp", php: "php",
@@ -11,10 +17,7 @@ const LANG_BY_EXT: Record<string, string> = {
   toml: "toml", md: "markdown", sql: "sql", ex: "elixir", exs: "elixir", vue: "vue", svelte: "svelte",
 };
 
-// Custom neobrutalist theme — dark code on warm paper UI (see code-theme.ts).
-export const CODE_THEME = CODE_THEME_NAME;
-
-export function langFor(path: string): string {
+export function langFor(path: string): BundledLanguage | "text" {
   const ext = path.split(".").pop()?.toLowerCase() ?? "";
   const lang = LANG_BY_EXT[ext];
   return lang && lang in bundledLanguages ? lang : "text";
@@ -23,18 +26,13 @@ export function langFor(path: string): string {
 export const esc = (s: string) =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
-function tokenStyle(token: { htmlStyle?: string | Record<string, string>; color?: string }): string {
-  if (token.htmlStyle) {
-    if (typeof token.htmlStyle === "string") return token.htmlStyle;
-    return Object.entries(token.htmlStyle)
-      .map(([k, v]) => `${k}:${v}`)
-      .join(";");
-  }
+/** Single-theme tokens: color only (no dual-theme htmlStyle objects). */
+function tokenStyle(token: Pick<ThemedToken, "color">): string {
   return token.color ? `color:${token.color}` : "";
 }
 
 export async function makeHighlighter(files: DiffFile[]): Promise<Highlighter> {
-  const langs = [...new Set(files.map((f) => langFor(f.path)).filter((l) => l !== "text"))];
+  const langs = [...new Set(files.map((f) => langFor(f.path)).filter((l): l is BundledLanguage => l !== "text"))];
   return createHighlighter({
     themes: [neobrutalTheme],
     langs,
@@ -45,11 +43,11 @@ export async function makeHighlighter(files: DiffFile[]): Promise<Highlighter> {
 // direct innerHTML use.
 export function highlightHunk(hl: Highlighter, file: DiffFile, hunk: Hunk): string[] {
   const code = hunk.lines.map((l) => l.text).join("\n");
-  let tokenLines: { htmlStyle?: string | Record<string, string>; color?: string; content: string }[][];
+  let tokenLines: Pick<ThemedToken, "content" | "color">[][];
   try {
     tokenLines = hl.codeToTokens(code, {
-      lang: langFor(file.path) as never,
-      theme: CODE_THEME,
+      lang: langFor(file.path),
+      theme: CODE_THEME_NAME,
     }).tokens;
   } catch {
     tokenLines = hunk.lines.map((l) => [{ content: l.text }]);

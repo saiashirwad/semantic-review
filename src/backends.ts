@@ -1,7 +1,7 @@
 import { z } from "zod";
-import { AnalysisSchema, analysisPrompt, type Analysis, type AnalysisResult } from "./analysis";
-import type { Effort } from "./config";
-import { HARNESSES, harnessBackend } from "./harness";
+import { AnalysisSchema, analysisPrompt, type Analysis, type AnalysisResult } from "./analysis.ts";
+import type { Effort } from "./config.ts";
+import { HARNESSES, harnessBackend } from "./harness.ts";
 
 export interface AnalyzeOpts {
   model?: string; // passed through to the backend; each CLI has its own model names

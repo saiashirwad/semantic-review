@@ -4,7 +4,7 @@
 //
 // Intentionally large: multi-file PR shape so the walkthrough, findings rail,
 // full diff, notes, and diagrams all have something to show.
-import type { Analysis } from "../../src/analysis";
+import type { Analysis } from "../../src/analysis.ts";
 
 export const DIFF = `diff --git a/src/retry.ts b/src/retry.ts
 new file mode 100644

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { diffForModel, hunkById, parseDiff } from "../src/diff";
+import { diffForModel, hunkById, parseDiff } from "../src/diff.ts";
 
 const MODIFIED = `diff --git a/src/greet.ts b/src/greet.ts
 index 1234567..89abcde 100644

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { extractAnalysis } from "../src/analysis";
+import { extractAnalysis } from "../src/analysis.ts";
 
 const VALID = JSON.stringify({
   title: "t",

@@ -1,6 +1,6 @@
 <script lang="ts">
-  import type { Finding } from "../../../src/analysis";
-  import { getReviewState } from "../state.svelte";
+  import type { Finding } from "../../../src/analysis.ts";
+  import { getReviewState } from "../state.svelte.ts";
 
   const { finding, key }: { finding: Finding; key: string } = $props();
   const review = getReviewState();

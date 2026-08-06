@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { BACKENDS } from "../src/backends";
+import { BACKENDS } from "../src/backends.ts";
 
 const originalFetch = globalThis.fetch;
 const originalOpenAIKey = process.env.OPENAI_API_KEY;

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { getReviewState } from "../state.svelte";
+  import { getReviewState } from "../state.svelte.ts";
 
   const review = getReviewState();
 </script>

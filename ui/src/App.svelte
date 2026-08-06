@@ -1,6 +1,6 @@
 <script lang="ts">
-  import type { ReviewPayload } from "../../src/payload";
-  import { ReviewState, provideReviewState } from "./state.svelte";
+  import type { ReviewPayload } from "../../src/payload.ts";
+  import { ReviewState, provideReviewState } from "./state.svelte.ts";
   import ProgressHeader from "./components/ProgressHeader.svelte";
   import Sidebar from "./components/Sidebar.svelte";
   import SectionCard from "./components/SectionCard.svelte";

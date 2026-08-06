@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { formatReview } from "../src/review";
+import { formatReview } from "../src/review.ts";
 
 describe("formatReview", () => {
   test("approves when there is nothing to say", () => {

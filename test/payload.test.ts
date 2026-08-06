@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
-import type { Analysis } from "../src/analysis";
-import { parseDiff } from "../src/diff";
-import { buildReviewPayload } from "../src/payload";
+import type { Analysis } from "../src/analysis.ts";
+import { parseDiff } from "../src/diff.ts";
+import { buildReviewPayload } from "../src/payload.ts";
 
 const DIFF = `diff --git a/src/greet.ts b/src/greet.ts
 index 0000000..1111111 100644

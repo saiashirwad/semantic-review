@@ -11,9 +11,9 @@ function devServer(): Plugin {
     configureServer(server) {
       server.middlewares.use("/dev/payload.json", async (_req, res) => {
         const [{ parseDiff }, { buildReviewPayload }, { DIFF, ANALYSES }] = await Promise.all([
-          import("../src/diff"),
-          import("../src/payload"),
-          import("./dev/data"),
+          import("../src/diff.ts"),
+          import("../src/payload.ts"),
+          import("./dev/data.ts"),
         ]);
         const payload = await buildReviewPayload(ANALYSES, parseDiff(DIFF), "server");
         res.setHeader("Content-Type", "application/json");

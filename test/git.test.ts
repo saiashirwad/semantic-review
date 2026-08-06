@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { getGitDiff } from "../src/git";
-import type { RunResult } from "../src/proc";
+import { getGitDiff } from "../src/git.ts";
+import type { RunResult } from "../src/proc.ts";
 
 const result = (stdout = "", code = 0, stderr = ""): RunResult => ({ stdout, stderr, code });
 

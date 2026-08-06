@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
-import { esc } from "./highlight";
-import type { ReviewPayload } from "./payload";
+import { esc } from "./highlight.ts";
+import type { ReviewPayload } from "./payload.ts";
 
 export interface UiAssets {
   js: string;

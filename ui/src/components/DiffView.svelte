@@ -1,6 +1,6 @@
 <script lang="ts">
-  import type { PayloadFile, PayloadHunk, PayloadLine } from "../../../src/payload";
-  import { getReviewState } from "../state.svelte";
+  import type { PayloadFile, PayloadHunk, PayloadLine } from "../../../src/payload.ts";
+  import { getReviewState } from "../state.svelte.ts";
   import Check from "./Check.svelte";
 
   interface Props {
@@ -83,7 +83,7 @@
   }
 
   function flagsFor(idx: number) {
-    return review.findingsAt(hunk.id, idx).filter(({ key }) => !review.resolvedFindings.has(key));
+    return review.findingsAt(hunk.id, idx).filter(({ key }) => review.isFindingOpen(key));
   }
 
   function openComment(line: PayloadLine, e: MouseEvent) {
@@ -100,7 +100,7 @@
     review.openFinding = review.openFinding === key ? null : key;
   }
 
-  const hunkFlags = $derived(review.findingsAt(hunk.id, null).filter(({ key }) => !review.resolvedFindings.has(key)));
+  const hunkFlags = $derived(review.findingsAt(hunk.id, null).filter(({ key }) => review.isFindingOpen(key)));
 </script>
 
 {#snippet gutterFlag(idx: number)}
@@ -132,9 +132,8 @@
     <td
       class="c {line.kind}"
       class:flagged={flagsFor(idx).length > 0}
-      data-ref={refFor(line)}
-      data-html={line.html}
-      data-text={line.text}
+      data-hunk={hunk.id}
+      data-idx={idx}
     >
       {@html line.html || "&nbsp;"}
     </td>
@@ -392,39 +391,11 @@
     background: transparent !important;
   }
 
-  /*
-   * Selection must hit nested shiki <span>s.
-   * Prefer a soft alpha wash when the engine supports it; fall back to the
-   * muted solid token (browsers that ignore alpha often ignore the whole rule
-   * if only transparent is set — so we set solid first, then override).
-   */
+  /* Soft wash over nested token spans — keep syntax color visible */
   .c::selection,
   .c :global(*)::selection {
-    background: var(--selection-bg) !important;
-    color: var(--selection-fg) !important;
-  }
-
-  .c::-moz-selection,
-  .c :global(*)::-moz-selection {
-    background: var(--selection-bg) !important;
-    color: var(--selection-fg) !important;
-  }
-
-  @supports (background: color-mix(in srgb, red 50%, transparent)) {
-    .c::selection,
-    .c :global(*)::selection {
-      /* Soft wash — syntax colors stay visible underneath */
-      background: color-mix(in srgb, var(--accent) 36%, transparent) !important;
-      color: inherit !important;
-      text-shadow: 0 0 0.5px rgba(0, 0, 0, 0.45);
-    }
-
-    .c::-moz-selection,
-    .c :global(*)::-moz-selection {
-      background: color-mix(in srgb, var(--accent) 36%, transparent) !important;
-      color: inherit !important;
-      text-shadow: 0 0 0.5px rgba(0, 0, 0, 0.45);
-    }
+    background: color-mix(in srgb, var(--accent) 36%, transparent) !important;
+    color: inherit !important;
   }
 
   .c.add {

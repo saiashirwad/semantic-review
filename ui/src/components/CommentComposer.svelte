@@ -1,14 +1,14 @@
 <script lang="ts">
-  import { getReviewState } from "../state.svelte";
-  import { startPopoverDrag, type Point } from "../popover-drag";
+  import { getReviewState } from "../state.svelte.ts";
+  import { startPopoverDrag, type Point } from "../popover-drag.ts";
   import CodeQuote from "./CodeQuote.svelte";
-  import DragGrip from "./DragGrip.svelte";
+  import FloatingChrome from "./FloatingChrome.svelte";
 
   const review = getReviewState();
 
   let text = $state("");
   let textareaEl = $state<HTMLTextAreaElement | null>(null);
-  let boxEl = $state<HTMLElement | null>(null);
+  let el = $state<HTMLElement | null>(null);
   /** Once the user drags, we stop re-deriving position from the anchor. */
   let dragPos = $state<Point | null>(null);
 
@@ -30,7 +30,7 @@
       };
     }
     const left = Math.max(8, Math.min(anchor.left, document.documentElement.clientWidth - WIDTH - 8));
-    const height = boxEl?.offsetHeight ?? EST_HEIGHT;
+    const height = el?.offsetHeight ?? EST_HEIGHT;
     const viewportBottom = window.scrollY + window.innerHeight;
     let top = anchor.top + 8;
     if (top + height > viewportBottom - 8) top = anchor.top - height - 12;
@@ -39,7 +39,9 @@
   });
 
   const pos = $derived(dragPos ?? basePos);
-  const style = $derived(`left: ${pos.left}px; top: ${pos.top}px;`);
+  const style = $derived(
+    `position:absolute;left:${pos.left}px;top:${pos.top}px;width:440px;max-width:calc(100vw - 24px);z-index:40`,
+  );
 
   $effect(() => {
     if (review.composer) {
@@ -52,8 +54,8 @@
   });
 
   function onDragStart(e: PointerEvent) {
-    const h = boxEl?.offsetHeight ?? EST_HEIGHT;
-    const w = boxEl?.offsetWidth ?? WIDTH;
+    const h = el?.offsetHeight ?? EST_HEIGHT;
+    const w = el?.offsetWidth ?? WIDTH;
     startPopoverDrag(e, pos, (p) => (dragPos = p), {
       mode: "absolute",
       width: w,
@@ -75,16 +77,19 @@
 </script>
 
 {#if review.composer}
-  <div class="composer" {style} bind:this={boxEl} role="dialog" aria-label="Add comment">
-    <header class="head">
-      <DragGrip onpointerdown={onDragStart} />
+  <FloatingChrome
+    class="composer"
+    ariaLabel="Add comment"
+    {style}
+    bind:el
+    onclose={() => (review.composer = null)}
+    ondragstart={onDragStart}
+  >
+    {#snippet head()}
       <span class="kicker">Comment</span>
-      <button type="button" class="close" title="Close (Esc)" onclick={() => (review.composer = null)}>
-        ✕
-      </button>
-    </header>
+    {/snippet}
 
-    <div class="body">
+    <div class="stack">
       <div class="meta">
         <span class="ref" title={review.composer.ref}>{review.composer.ref}</span>
         {#if lineCount > 1}
@@ -115,34 +120,10 @@
         </div>
       </footer>
     </div>
-  </div>
+  </FloatingChrome>
 {/if}
 
 <style>
-  .composer {
-    position: absolute;
-    z-index: 40;
-    width: 440px;
-    max-width: calc(100vw - 24px);
-    border: var(--border-w) solid var(--border);
-    background: var(--bg-raised);
-    color: var(--fg);
-    box-shadow: var(--shadow-pop);
-    font-family: var(--font-ui);
-  }
-
-  .head {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    min-height: 36px;
-    padding: 0 8px 0 6px;
-    border-bottom: var(--border-w) solid var(--border);
-    background: var(--bg-panel);
-    color: var(--fg);
-    user-select: none;
-  }
-
   .kicker {
     flex: 1;
     color: var(--accent);
@@ -152,33 +133,10 @@
     text-transform: uppercase;
   }
 
-  .close {
-    display: grid;
-    place-items: center;
-    width: 28px;
-    height: 28px;
-    margin: 0;
-    padding: 0;
-    border: 2px solid transparent;
-    background: transparent;
-    color: var(--fg-muted);
-    font-size: 14px;
-    font-weight: 700;
-    line-height: 1;
-    cursor: pointer;
-  }
-
-  .close:hover {
-    border-color: var(--border);
-    background: var(--bg-hover);
-    color: var(--fg);
-  }
-
-  .body {
+  .stack {
     display: flex;
     flex-direction: column;
     gap: 12px;
-    padding: 14px;
   }
 
   .meta {
@@ -290,45 +248,14 @@
     flex-shrink: 0;
   }
 
-  .btn {
+  :global(.float.composer .btn.save) {
+    min-width: 72px;
     height: 34px;
     padding: 0 14px;
-    border: var(--border-w) solid var(--border);
-    font-size: var(--fs-xs);
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    cursor: pointer;
-    box-shadow: var(--shadow-btn);
   }
 
-  .btn:active:not(:disabled) {
-    transform: translate(1px, 1px);
-    box-shadow: none;
-  }
-
-  .btn.ghost {
-    background: var(--bg-raised);
-    color: var(--fg);
-  }
-
-  .btn.ghost:hover {
-    background: var(--bg-hover);
-  }
-
-  .btn.save {
-    background: var(--accent);
-    color: var(--accent-fg);
-    min-width: 72px;
-  }
-
-  .btn.save:hover:not(:disabled) {
-    background: var(--accent-hover);
-  }
-
-  .btn.save:disabled {
-    opacity: 0.45;
-    cursor: not-allowed;
-    box-shadow: none;
+  :global(.float.composer .btn.ghost) {
+    height: 34px;
+    padding: 0 14px;
   }
 </style>

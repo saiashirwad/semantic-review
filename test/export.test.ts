@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { mkdtemp, readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { exportReview } from "../src/export";
+import { exportReview } from "../src/export.ts";
 
 describe("export", () => {
   test("writes HTML to a resolved path", async () => {

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { getReviewState } from "../state.svelte";
+  import { getReviewState } from "../state.svelte.ts";
   import FindingCard from "./FindingCard.svelte";
   import CommentsList from "./CommentsList.svelte";
   import OverallBox from "./OverallBox.svelte";

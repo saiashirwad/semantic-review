@@ -1,6 +1,6 @@
 import { createServer } from "node:http";
 import { spawn } from "node:child_process";
-import type { ReviewResult } from "./review";
+import type { ReviewResult } from "./review.ts";
 
 // Serves the report on localhost and resolves when the reviewer clicks Done.
 export function serveReview(html: string, openBrowser: boolean): Promise<ReviewResult> {

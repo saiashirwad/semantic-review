@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import type { PayloadFile } from "../../../src/payload";
-  import { getReviewState } from "../state.svelte";
+  import type { PayloadFile } from "../../../src/payload.ts";
+  import { getReviewState } from "../state.svelte.ts";
   import Check from "./Check.svelte";
   import FilePath from "./FilePath.svelte";
 

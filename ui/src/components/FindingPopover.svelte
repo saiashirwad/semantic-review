@@ -1,16 +1,16 @@
 <script lang="ts">
-  import type { Finding } from "../../../src/analysis";
-  import { getReviewState } from "../state.svelte";
-  import { startPopoverDrag } from "../popover-drag";
+  import type { Finding } from "../../../src/analysis.ts";
+  import { getReviewState } from "../state.svelte.ts";
+  import { startPopoverDrag } from "../popover-drag.ts";
   import {
     computePopoverPos,
     headerOffsetPx,
     pickVisibleAnchor,
     rowVisible,
     POPOVER_EDGE,
-  } from "../popover-place";
+  } from "../popover-place.ts";
   import CodeQuote from "./CodeQuote.svelte";
-  import DragGrip from "./DragGrip.svelte";
+  import FloatingChrome from "./FloatingChrome.svelte";
   import Prose from "./Prose.svelte";
 
   const { finding, key }: { finding: Finding; key: string } = $props();
@@ -32,16 +32,6 @@
   let ready = $state(false);
   /** After a manual drag, stop auto-repositioning / auto-closing on scroll. */
   let userDragged = $state(false);
-
-  /** Escape overflow:hidden on .hunk by mounting on body. */
-  function portal(node: HTMLElement) {
-    document.body.appendChild(node);
-    return {
-      destroy() {
-        node.remove();
-      },
-    };
-  }
 
   function anchorEl(): HTMLElement | null {
     return pickVisibleAnchor(
@@ -109,7 +99,7 @@
       });
     };
 
-    // Two frames: portal + bind:this settle, then measure
+    // Two frames: portal + bind settle, then measure
     requestAnimationFrame(() => {
       requestAnimationFrame(() => place({ closeIfOffscreen: false }));
     });
@@ -146,95 +136,48 @@
   function onkeydown(e: KeyboardEvent) {
     if (e.key === "Escape") review.openFinding = null;
   }
+
+  const style = $derived(
+    pos ? `position:fixed;left:${pos.left}px;top:${pos.top}px;max-height:${pos.maxHeight}px;z-index:50` : "position:fixed;z-index:50",
+  );
 </script>
 
 <svelte:window {onkeydown} />
 
-<!-- Stop outside handlers from treating popover clicks as dismissals. -->
-<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-<!-- svelte-ignore a11y_interactive_supports_focus -->
-<!-- svelte-ignore a11y_click_events_have_key_events -->
-<div
-  class="popover"
-  class:ready
-  role="dialog"
-  aria-label={finding.title}
-  tabindex="-1"
-  use:portal
-  bind:this={el}
-  style={pos
-    ? `left:${pos.left}px;top:${pos.top}px;max-height:${pos.maxHeight}px`
-    : undefined}
-  onclick={(e) => e.stopPropagation()}
-  onmousedown={(e) => e.stopPropagation()}
+<FloatingChrome
+  class="finding"
+  ariaLabel={finding.title}
+  {style}
+  {ready}
+  portal
+  bind:el
+  onclose={() => (review.openFinding = null)}
+  ondragstart={onDragStart}
 >
-  <header class="head">
-    <DragGrip onpointerdown={onDragStart} />
+  {#snippet head()}
     <span class="kind sev-{finding.severity}">{KIND[finding.severity]}</span>
     <span class="ref" title={ref}>{ref}</span>
-    <button type="button" class="close" title="Close (Esc)" onclick={() => (review.openFinding = null)}>✕</button>
-  </header>
+  {/snippet}
 
-  <div class="body">
-    <h4>{finding.title}</h4>
-    <div class="prose"><Prose text={finding.body} /></div>
+  <h4>{finding.title}</h4>
+  <div class="prose"><Prose text={finding.body} /></div>
 
-    <CodeQuote html={quoteHtml || undefined} quote={quote} maxHeight="72px" />
+  <CodeQuote html={quoteHtml || undefined} quote={quote} maxHeight="72px" />
 
-    {#if finding.recommendation.trim()}
-      <div class="rec-label">Recommendation</div>
-      <div class="prose"><Prose text={finding.recommendation} /></div>
-    {/if}
+  {#if finding.recommendation.trim()}
+    <div class="rec-label">Recommendation</div>
+    <div class="prose"><Prose text={finding.recommendation} /></div>
+  {/if}
 
-    <div class="actions">
-      <button type="button" class="btn primary" onclick={() => review.sendFinding(key, finding)}>
-        Add to review
-      </button>
-      <button type="button" class="btn" onclick={() => review.resolveFinding(key)}>Mark resolved</button>
-    </div>
+  <div class="actions">
+    <button type="button" class="btn primary" onclick={() => review.sendFinding(key, finding)}>
+      Add to review
+    </button>
+    <button type="button" class="btn" onclick={() => review.resolveFinding(key)}>Mark resolved</button>
   </div>
-</div>
+</FloatingChrome>
 
 <style>
-  .popover {
-    position: fixed;
-    z-index: 50;
-    width: min(400px, 85vw);
-    overflow-x: hidden;
-    overflow-y: auto;
-    border: var(--border-w) solid var(--border);
-    background: var(--bg-raised);
-    color: var(--fg);
-    box-shadow: var(--shadow-pop);
-    font-family: var(--font-ui);
-    white-space: normal;
-    word-break: normal;
-    text-align: left;
-    cursor: auto;
-    /* Hidden until first successful place — avoid flash at 0,0 */
-    opacity: 0;
-    pointer-events: none;
-  }
-
-  .popover.ready {
-    opacity: 1;
-    pointer-events: auto;
-  }
-
-  .head {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    min-height: 36px;
-    padding: 0 8px 0 6px;
-    border-bottom: var(--border-w) solid var(--border);
-    background: var(--bg-panel);
-    position: sticky;
-    top: 0;
-    z-index: 1;
-    user-select: none;
-  }
-
   .kind {
     flex-shrink: 0;
     padding: 2px 8px;
@@ -276,32 +219,7 @@
     white-space: nowrap;
   }
 
-  .close {
-    flex-shrink: 0;
-    display: grid;
-    place-items: center;
-    width: 28px;
-    height: 28px;
-    padding: 0;
-    border: 2px solid transparent;
-    background: none;
-    color: var(--fg-muted);
-    font-size: 14px;
-    font-weight: 700;
-    cursor: pointer;
-  }
-
-  .close:hover {
-    border-color: var(--border);
-    background: var(--bg-hover);
-    color: var(--fg);
-  }
-
-  .body {
-    padding: 12px 14px 14px;
-  }
-
-  .body :global(.quote-frame) {
+  :global(.float.finding .quote-frame) {
     margin-top: 10px;
   }
 
@@ -332,37 +250,5 @@
     display: flex;
     gap: 8px;
     margin-top: 14px;
-  }
-
-  .btn {
-    height: 32px;
-    padding: 0 12px;
-    border: var(--border-w) solid var(--border);
-    background: var(--bg-raised);
-    color: var(--fg);
-    font-size: var(--fs-xs);
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    cursor: pointer;
-    box-shadow: var(--shadow-btn);
-  }
-
-  .btn:hover {
-    background: var(--bg-hover);
-  }
-
-  .btn.primary {
-    background: var(--accent);
-    color: var(--accent-fg);
-  }
-
-  .btn.primary:hover {
-    background: var(--accent-hover);
-  }
-
-  .btn:active {
-    transform: translate(1px, 1px);
-    box-shadow: none;
   }
 </style>

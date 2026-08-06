@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
-import type { Analysis } from "../src/analysis";
-import { parseDiff } from "../src/diff";
-import { buildReviewPayload } from "../src/payload";
-import { renderShell, type UiAssets } from "../src/shell";
+import type { Analysis } from "../src/analysis.ts";
+import { parseDiff } from "../src/diff.ts";
+import { buildReviewPayload } from "../src/payload.ts";
+import { renderShell, type UiAssets } from "../src/shell.ts";
 
 const STUB_ASSETS: UiAssets = { js: "/* stub app */", css: "/* stub css */" };
 

@@ -67,29 +67,34 @@
 :root {
   color-scheme: light dark;
 
+  /*
+   * Brand / code / severity colors must match src/palette.ts.
+   * Edit the palette module first, then mirror hex values here.
+   */
+
   /* Warm paper canvas, pure white cards, pure black structure */
-  --bg: #f3f0e8;
-  --bg-raised: #ffffff;
-  --bg-inset: #e8e2d6;
+  --bg: #f3f0e8; /* palette.paper */
+  --bg-raised: #ffffff; /* palette.raised */
+  --bg-inset: #e8e2d6; /* palette.inset */
   --bg-hover: #ddd5c6;
-  --bg-panel: #fff8ec;
-  --bg-code: #111111;
-  --fg: #0a0a0a;
-  --fg-muted: #2e2e2e;
-  --fg-faint: #5c5c5c;
-  --fg-code: #f5f5f5;
+  --bg-panel: #fff8ec; /* palette.panel */
+  --bg-code: #111111; /* palette.codeBg */
+  --fg: #0a0a0a; /* palette.ink */
+  --fg-muted: #2e2e2e; /* palette.inkMuted */
+  --fg-faint: #5c5c5c; /* palette.inkFaint */
+  --fg-code: #f2ede4; /* palette.codeFg */
   --border: #0a0a0a;
   --border-soft: #0a0a0a;
   --border-w: 2px;
 
   /* Hot orange primary (PostHog energy), black action */
-  --accent: #f54e00;
-  --accent-hover: #c73f00;
+  --accent: #f54e00; /* palette.accent */
+  --accent-hover: #c73f00; /* palette.accentHover */
   --accent-fg: #ffffff;
-  --accent-soft: #ffdcc8;
+  --accent-soft: #ffdcc8; /* palette.accentSoft */
   /* Text selection — muted copper (reads as translucent; pure alpha often
      falls back to system blue, so we bake the mix into an opaque color) */
-  --selection-bg: #c45a32;
+  --selection-bg: #c45a32; /* palette.selection */
   --selection-fg: #fff5ee;
   --action: #0a0a0a;
   --action-hover: #222222;
@@ -98,18 +103,23 @@
   --selected-soft: #c6f0dd;
   --selected-fg: #064032;
 
-  --add-bg: #0c2418;
-  --del-bg: #2a1010;
-  --add-fg: #3dd68c;
-  --del-fg: #ff6b6b;
+  --add-bg: #0c2418; /* palette.addBg */
+  --del-bg: #2a1010; /* palette.delBg */
+  --add-fg: #3dd68c; /* palette.addFg */
+  --del-fg: #ff6b6b; /* palette.delFg */
   /* Subtle tints so syntax token colors stay readable */
-  --add-row: #0f1f16;
-  --del-row: #241212;
+  --add-row: #0f1f16; /* palette.addRow */
+  --del-row: #241212; /* palette.delRow */
 
-  --sev-critical: #e03131;
-  --sev-major: #f54e00;
-  --sev-minor: #c99200;
-  --sev-info: #1c7ed6;
+  --sev-critical: #e03131; /* palette.sevCritical */
+  --sev-major: #f54e00; /* palette.sevMajor */
+  --sev-minor: #c99200; /* palette.sevMinor */
+  --sev-info: #1c7ed6; /* palette.sevInfo */
+
+  /* Diagram card tokens (Diagram.svelte --d-*) */
+  --diagram-bg: #faf8f4; /* palette.diagramBg */
+  --diagram-line: #9a948a; /* palette.diagramLine */
+  --diagram-border: #2a2a2a; /* palette.diagramBorder */
 
   /* Sans for UI · Mono for code only */
   --font-ui: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;

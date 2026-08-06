@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { getReviewState } from "../state.svelte";
+  import { getReviewState } from "../state.svelte.ts";
 
   const review = getReviewState();
 
@@ -29,18 +29,44 @@
     let node: Node | null = sel.focusNode ?? sel.anchorNode;
     if (node && node.nodeType === Node.TEXT_NODE) node = node.parentElement;
     const el = node as Element | null;
-    const td = el?.closest?.("[data-ref]") as HTMLElement | null;
+    const td = el?.closest?.("td[data-hunk][data-idx]") as HTMLElement | null;
     const section = el?.closest?.("[data-ctx]") as HTMLElement | null;
-    const ref = td?.dataset.ref ?? (section ? `§ ${section.dataset.ctx}` : "report");
+
     const table = td?.closest("table");
     const cells = table
-      ? [...table.querySelectorAll<HTMLElement>("td[data-html]")].filter((cell) => range.intersectsNode(cell))
+      ? [...table.querySelectorAll<HTMLElement>("td[data-hunk][data-idx]")].filter((cell) =>
+          range.intersectsNode(cell),
+        )
       : [];
-    const quote = cells.length > 0 ? cells.map((cell) => cell.dataset.text ?? "").join("\n") : sel.toString().trim();
-    const html = cells.length > 0 ? cells.map((cell) => cell.dataset.html!).join("\n") : undefined;
-    const lines = cells.length > 0 ? cells.length : Math.max(1, quote.split("\n").filter((l) => l.length > 0).length);
 
-    return { quote, html, ref, rect, lines };
+    if (cells.length > 0) {
+      const payloadLines = cells
+        .map((cell) => review.lineAt(cell.dataset.hunk!, Number(cell.dataset.idx)))
+        .filter((l): l is NonNullable<typeof l> => l != null);
+      if (payloadLines.length === 0) return null;
+      const first = cells[0];
+      const ref = review.refForLine(first.dataset.hunk!, Number(first.dataset.idx));
+      return {
+        quote: payloadLines.map((l) => l.text).join("\n"),
+        html: payloadLines.map((l) => l.html).join("\n"),
+        ref,
+        rect,
+        lines: payloadLines.length,
+      };
+    }
+
+    const ref = td
+      ? review.refForLine(td.dataset.hunk!, Number(td.dataset.idx))
+      : section
+        ? `§ ${section.dataset.ctx}`
+        : "report";
+    const quote = sel.toString().trim();
+    return {
+      quote,
+      ref,
+      rect,
+      lines: Math.max(1, quote.split("\n").filter((l) => l.length > 0).length),
+    };
   }
 
   function clampPos(left: number, top: number): { left: number; top: number } {
@@ -54,7 +80,7 @@
 
   function onmouseup(e: MouseEvent) {
     const target = e.target as Element;
-    if (target.closest(".composer") || target.closest(".bubble")) return;
+    if (target.closest(".composer") || target.closest(".bubble") || target.closest(".float")) return;
     // Capture pointer immediately — selection resolve is deferred a tick
     const mouse = {
       left: e.clientX + window.scrollX,
@@ -95,7 +121,7 @@
 
   function dismiss(e: MouseEvent) {
     const target = e.target as Element;
-    if (target.closest(".bubble") || target.closest(".composer")) return;
+    if (target.closest(".bubble") || target.closest(".composer") || target.closest(".float")) return;
     if (pos) {
       pos = null;
       pointer = null;

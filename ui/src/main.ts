@@ -1,6 +1,6 @@
 import { mount } from "svelte";
 import App from "./App.svelte";
-import type { ReviewPayload } from "../../src/payload";
+import type { ReviewPayload } from "../../src/payload.ts";
 import "./app.css";
 
 declare global {

@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { mkdtemp, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { configuredBackends, loadConfig } from "../src/config";
+import { configuredBackends, loadConfig } from "../src/config.ts";
 
 describe("config", () => {
   test("a missing config is empty", async () => {
