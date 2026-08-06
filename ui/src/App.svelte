@@ -172,7 +172,7 @@
   >
     <Sidebar />
     <FilesRail />
-    <main class:has-notes={review.comments.some((c) => c.jump?.kind === "line")}>
+    <main>
       <div class="masthead" bind:this={mastheadEl}>
         <h1 class="mast-title">{payload.title}</h1>
         <div class="double-rule" aria-hidden="true">
@@ -277,13 +277,8 @@
     background: var(--bg);
   }
 
-  /* Reserve the margin-note gutter only when notes exist — an empty
-     reservation wastes ~200px of reading width on laptop screens. */
-  @media (min-width: 1600px) {
-    main.has-notes {
-      padding-right: calc(var(--space-3) + 180px + 12px);
-    }
-  }
+  /* Margin notes overlay the right edge as collapsed markers — no reserved
+     gutter, the code column always gets the full width. */
 
   .masthead {
     margin-bottom: var(--space-4);

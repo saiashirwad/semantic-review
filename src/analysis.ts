@@ -15,25 +15,27 @@ export const FindingSchema = z.object({
 
 export type Finding = z.infer<typeof FindingSchema>;
 
+export const SectionSchema = z.object({
+  heading: z.string(),
+  // One-line plain-text subtitle shown under the heading in the walk rail.
+  deck: z.string(),
+  intro: z.string(),
+  diagram: z.string(),
+  snippets: z.array(
+    z.object({
+      hunk_id: z.string(),
+      from: z.number().nullable(),
+      to: z.number().nullable(),
+      note: z.string(),
+    }),
+  ),
+});
+
 export const AnalysisSchema = z.object({
   title: z.string(),
   summary: z.string(),
   diagram: z.string(),
-  sections: z.array(
-    z.object({
-      heading: z.string(),
-      intro: z.string(),
-      diagram: z.string(),
-      snippets: z.array(
-        z.object({
-          hunk_id: z.string(),
-          from: z.number().nullable(),
-          to: z.number().nullable(),
-          note: z.string(),
-        }),
-      ),
-    }),
-  ),
+  sections: z.array(SectionSchema),
   findings: z.array(FindingSchema),
   notes: z.array(z.string()),
 });
@@ -41,9 +43,10 @@ export const AnalysisSchema = z.object({
 export type Analysis = z.infer<typeof AnalysisSchema>;
 
 // Lenient variant for caller-provided JSON (--analysis files, CLI harness
-// output): analyses written before findings existed still parse.
+// output): analyses written before findings/decks existed still parse.
 export const AnalysisInputSchema = AnalysisSchema.extend({
   findings: z.array(FindingSchema).default([]),
+  sections: z.array(SectionSchema.extend({ deck: z.string().default("") })),
 });
 
 // One analysis per backend; the report renders a tab per result.
@@ -66,6 +69,7 @@ Produce a JSON object with exactly this shape:
   "sections": [
     {
       "heading": "...",
+      "deck": "one plain-text line saying what changed here (shown under the heading in the nav rail)",
       "intro": "1-2 sentences introducing this part of the change",
       "diagram": "optional mermaid diagram source for this section, or \\"\\"",
       "snippets": [
@@ -81,6 +85,7 @@ Produce a JSON object with exactly this shape:
 
 Rules:
 - Be brief. Section intros are 1-2 sentences; snippet notes are one short line or "". No filler.
+- "deck" is a one-line subtitle (under ~90 characters, plain text, no backticks) that stands alone in a navigation list: say concretely what changed in that section ("Adds withRetry with jittered backoff and per-try timeout"), not a vague label.
 - "diagram" (top level and per section): include a small mermaid diagram ONLY when that part of the change is genuinely graph-shaped (data flowing through new pieces, call-order changes, moved responsibilities) — a "flowchart LR" or "sequenceDiagram" with 3-8 nodes, no styling directives. The top-level diagram is a whole-change overview; a section diagram covers just that section. Use "" when a diagram would not beat prose — most small changes need none, and few sections deserve their own.
 - Snippets are EXCERPTS: pick the smallest line range that shows the interesting part (typically 3-12 lines), using the line-number prefixes. from/to use new-file numbers; for ranges of deleted lines use the old-file numbers (positive). Use null for both to include the whole hunk — only when the hunk is already small.
 - Group by code path / concern, not by file. Order sections by importance: core change first.

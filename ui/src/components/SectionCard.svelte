@@ -71,27 +71,24 @@
     letter-spacing: -0.02em;
   }
 
+  /* Solid chip — same language as the walk rail's boxed numbers */
   .num {
     flex-shrink: 0;
-    min-width: 1.2em;
-    height: auto;
-    border: 0;
-    background: transparent;
-    color: transparent;
-    -webkit-text-stroke: 2px var(--fg);
-    font-family: var(--font-display);
-    font-size: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 26px;
+    height: 26px;
+    padding: 0 6px;
+    border: var(--border-w) solid var(--border);
+    background: var(--fg);
+    color: var(--bg-raised);
+    font-family: var(--font-code);
+    font-size: var(--fs-sm);
     font-weight: 700;
     line-height: 1;
-    letter-spacing: -0.04em;
-    text-align: left;
-  }
-
-  @supports not (-webkit-text-stroke: 1px black) {
-    .num {
-      color: var(--fg);
-      -webkit-text-stroke: 0;
-    }
+    letter-spacing: 0.02em;
+    box-shadow: var(--shadow-btn);
   }
 
   .intro {

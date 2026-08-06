@@ -9,11 +9,14 @@
     comment: UiComment;
     index: number;
     top: number;
+    /** Source line element — hover highlights its row. */
+    el: Element;
   };
 
   let mainEl = $state<HTMLElement | null>(null);
   let placed = $state<Placed[]>([]);
-  const NOTE_H = 56;
+  /** Collapsed marker height — packing spaces markers, not open cards. */
+  const NOTE_H = 26;
 
   function resolveMain(): HTMLElement | null {
     return document.querySelector("main");
@@ -28,7 +31,7 @@
     }
     const mainRect = main.getBoundingClientRect();
     const mainTop = mainRect.top + window.scrollY;
-    const inputs: { id: string; y: number; height: number; comment: UiComment; index: number }[] = [];
+    const inputs: { id: string; y: number; height: number; comment: UiComment; index: number; el: Element }[] = [];
 
     review.comments.forEach((comment, index) => {
       if (comment.jump?.kind !== "line") return;
@@ -39,7 +42,7 @@
       if (!el) return;
       if (el.closest("details:not([open])")) return;
       const y = el.getBoundingClientRect().top + window.scrollY - mainTop;
-      inputs.push({ id: String(index), y, height: NOTE_H, comment, index });
+      inputs.push({ id: String(index), y, height: NOTE_H, comment, index, el });
     });
 
     const tops = packMarginNotes(
@@ -50,8 +53,20 @@
       comment: n.comment,
       index: n.index,
       top: tops.get(n.id) ?? n.y,
+      el: n.el,
     }));
   }
+
+  /** Marker under the pointer / focus — highlights its source row. */
+  let hovered = $state<Placed | null>(null);
+
+  $effect(() => {
+    const n = hovered;
+    if (!n) return;
+    const row = n.el.closest("tr") ?? n.el.closest("[data-line]") ?? n.el;
+    row.classList.add("peek-line");
+    return () => row.classList.remove("peek-line");
+  });
 
   onMount(() => {
     const main = resolveMain();
@@ -73,7 +88,9 @@
   });
 
   $effect(() => {
-    void review.comments;
+    // Read length + items so pushes to the deeply-reactive array re-trigger;
+    // a bare property read tracks only reassignment of the field itself.
+    for (const c of review.comments) void c.jump;
     void review.activeResult;
     void tick().then(recompute);
   });
@@ -86,40 +103,56 @@
         type="button"
         class="note"
         style:top="{n.top}px"
-        title={n.comment.text}
+        aria-label={`Comment at ${n.comment.ref}: ${n.comment.text}`}
+        onmouseenter={() => (hovered = n)}
+        onmouseleave={() => (hovered = null)}
+        onfocus={() => (hovered = n)}
+        onblur={() => (hovered = null)}
         onclick={() => review.jumpToComment(n.comment)}
       >
-        <span class="text">{n.comment.text}</span>
+        <span class="dot" aria-hidden="true"></span>
+        <span class="card">
+          <span class="text">{n.comment.text}</span>
+          <span class="ref">{n.comment.ref}</span>
+        </span>
       </button>
     {/each}
   </div>
 {/if}
 
 <style>
+  /* Zero-width layer at main's right edge — markers overlay the content,
+     nothing reserves reading width. */
   .margin-notes {
     display: none;
     position: absolute;
     top: 0;
     right: 0;
-    width: 180px;
     bottom: 0;
+    width: 0;
     pointer-events: none;
-    z-index: 4;
+    z-index: 6;
   }
 
-  @media (min-width: 1600px) {
+  @media (min-width: 1120px) {
     .margin-notes {
       display: block;
     }
   }
 
+  /* Collapsed: a small chip. Hover/focus: expands leftward into the card. */
   .note {
     position: absolute;
-    right: 0;
-    left: 0;
+    right: 4px;
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    width: 26px;
+    max-height: 24px;
+    overflow: hidden;
     pointer-events: auto;
     margin: 0;
-    padding: 6px 8px;
+    padding: 5px 7px;
     border: 2px solid var(--border);
     background: var(--bg-raised);
     box-shadow: var(--shadow-btn);
@@ -128,29 +161,53 @@
     color: var(--fg);
   }
 
-  .note::before {
-    content: "";
-    position: absolute;
-    left: -24px;
-    top: 10px;
-    width: 24px;
-    height: 2px;
+  .note:hover,
+  .note:focus-visible {
+    z-index: 7;
+    width: 280px;
+    max-height: none;
+    background: var(--bg-raised);
+  }
+
+  .dot {
+    flex-shrink: 0;
+    width: 8px;
+    height: 8px;
+    margin-top: 3px;
+    border: 1px solid var(--border);
     background: var(--accent);
+  }
+
+  .card {
+    display: none;
+    min-width: 0;
+  }
+
+  .note:hover .card,
+  .note:focus-visible .card {
+    display: block;
   }
 
   .text {
     display: -webkit-box;
     overflow: hidden;
     -webkit-box-orient: vertical;
-    -webkit-line-clamp: 3;
-    line-clamp: 3;
+    -webkit-line-clamp: 6;
+    line-clamp: 6;
     font-size: var(--fs-xs);
     line-height: 1.35;
     font-weight: 500;
   }
 
-  .note:hover {
-    background: var(--bg-hover);
+  .ref {
+    display: block;
+    margin-top: 3px;
+    overflow: hidden;
+    color: var(--fg-faint);
+    font-family: var(--font-code);
+    font-size: var(--fs-xs);
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .note:active {

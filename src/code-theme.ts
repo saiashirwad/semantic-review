@@ -36,7 +36,7 @@ export const neobrutalTheme = {
     "editorLineNumber.foreground": p.codeLine,
     "editorLineNumber.activeForeground": p.codeMuted,
     "editor.selectionBackground": `${p.accent}40`,
-    "editor.lineHighlightBackground": "#161616",
+    "editor.lineHighlightBackground": "#221f1a",
     "editorCursor.foreground": p.accent,
     "editor.findMatchBackground": `${p.function}55`,
     "editor.findMatchHighlightBackground": `${p.function}28`,
@@ -44,7 +44,9 @@ export const neobrutalTheme = {
     "diffEditor.removedTextBackground": `${p.delBg}88`,
   },
   settings: [
-    role(["comment", "punctuation.definition.comment", "string.comment"], p.codeFaint, "italic"),
+    // No italic: only upright Plex Mono weights ship, so italic renders as a
+    // synthesized oblique — faux-slanted and ugly. Faint color carries the role.
+    role(["comment", "punctuation.definition.comment", "string.comment"], p.codeFaint),
     role(
       [
         "keyword",

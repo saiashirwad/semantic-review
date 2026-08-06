@@ -10,6 +10,9 @@
     kind: "finding" | "comment";
     severity?: string;
     label: string;
+    ref: string;
+    /** Source anchor element — hover highlights its row. */
+    el: Element;
     onClick: () => void;
   };
 
@@ -17,6 +20,8 @@
   let winTop = $state(0);
   let winH = $state(0.1);
   let trackEl = $state<HTMLElement | null>(null);
+  /** Tick under the pointer / keyboard focus — drives the flyout card. */
+  let hover = $state<Tick | null>(null);
 
   function scrollFraction(): { top: number; height: number } {
     const sh = Math.max(1, document.documentElement.scrollHeight);
@@ -43,6 +48,8 @@
         kind: "finding",
         severity: finding.severity,
         label: finding.title,
+        ref: review.refForFinding(finding),
+        el,
         onClick: () => void review.jumpToFinding(key),
       });
     }
@@ -60,6 +67,8 @@
         pct: (y / sh) * 100,
         kind: "comment",
         label: comment.text.slice(0, 80) || "Comment",
+        ref: comment.ref,
+        el,
         onClick: () => void review.jumpToComment(comment),
       });
     });
@@ -112,9 +121,19 @@
 
   $effect(() => {
     void review.findingsIndex;
-    void review.comments;
+    // Iterate so array pushes re-trigger (bare read tracks only reassignment)
+    for (const c of review.comments) void c.jump;
     void review.activeResult;
     void tick().then(recomputeTicks);
+  });
+
+  // Hovering a tick highlights the row it points at.
+  $effect(() => {
+    const t = hover;
+    if (!t) return;
+    const row = t.el.closest("tr") ?? t.el.closest("[data-line]") ?? t.el;
+    row.classList.add("peek-line");
+    return () => row.classList.remove("peek-line");
   });
 </script>
 
@@ -137,14 +156,33 @@
       class:sev-minor={t.severity === "minor"}
       class:sev-info={t.severity === "info"}
       style:top="{t.pct}%"
-      title={t.label}
       aria-label={t.label}
+      onmouseenter={() => (hover = t)}
+      onmouseleave={() => (hover = null)}
+      onfocus={() => (hover = t)}
+      onblur={() => (hover = null)}
       onclick={(e) => {
         e.stopPropagation();
         t.onClick();
       }}
     ></button>
   {/each}
+  {#if hover}
+    <div class="fly" style:top="clamp(32px, {hover.pct}%, calc(100% - 32px))">
+      <span
+        class="fly-sev"
+        class:comment={hover.kind === "comment"}
+        class:sev-critical={hover.severity === "critical"}
+        class:sev-major={hover.severity === "major"}
+        class:sev-minor={hover.severity === "minor"}
+        class:sev-info={hover.severity === "info"}
+      ></span>
+      <span class="fly-text">
+        <span class="fly-title">{hover.label}</span>
+        <span class="fly-ref">{hover.ref}</span>
+      </span>
+    </div>
+  {/if}
 </div>
 
 <style>
@@ -169,38 +207,114 @@
     box-sizing: border-box;
   }
 
+  /* 3px visible band inside a 11px hit target — transparent borders pad the
+     hover zone without fattening the mark (background-clip keeps paint inside). */
   .tick {
     position: absolute;
     left: 0;
     right: 0;
-    height: 3px;
+    height: 11px;
     margin: 0;
     padding: 0;
-    border: 0;
+    border: 4px solid transparent;
+    border-left: 0;
+    border-right: 0;
     border-radius: 0;
+    background-clip: padding-box;
     transform: translateY(-50%);
     cursor: pointer;
   }
 
   .tick.finding.sev-critical {
-    background: var(--sev-critical);
+    background-color: var(--sev-critical);
   }
   .tick.finding.sev-major {
-    background: var(--sev-major);
+    background-color: var(--sev-major);
   }
   .tick.finding.sev-minor {
-    background: var(--sev-minor);
+    background-color: var(--sev-minor);
   }
   .tick.finding.sev-info {
-    background: var(--sev-info);
+    background-color: var(--sev-info);
   }
 
   .tick.comment {
-    height: 2px;
+    background-color: var(--fg);
+  }
+
+  .tick:hover,
+  .tick:focus-visible {
+    border-top-width: 2px;
+    border-bottom-width: 2px;
+  }
+
+  /* Flyout card — hard popover sliding out left of the track */
+  .fly {
+    position: absolute;
+    right: calc(100% + 8px);
+    z-index: 30;
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+    width: 260px;
+    padding: 8px 10px;
+    transform: translateY(-50%);
+    border: var(--border-w) solid var(--border);
+    background: var(--bg-raised);
+    box-shadow: var(--shadow-pop);
+    pointer-events: none;
+    text-align: left;
+  }
+
+  .fly-sev {
+    flex-shrink: 0;
+    width: 10px;
+    height: 10px;
+    margin-top: 4px;
+    border: 1px solid var(--border);
+  }
+
+  .fly-sev.sev-critical {
+    background: var(--sev-critical);
+  }
+  .fly-sev.sev-major {
+    background: var(--sev-major);
+  }
+  .fly-sev.sev-minor {
+    background: var(--sev-minor);
+  }
+  .fly-sev.sev-info {
+    background: var(--sev-info);
+  }
+  .fly-sev.comment {
     background: var(--fg);
   }
 
-  .tick:hover {
-    height: 5px;
+  .fly-text {
+    display: block;
+    min-width: 0;
+  }
+
+  .fly-title {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    font-size: var(--fs-sm);
+    font-weight: 600;
+    line-height: 1.35;
+    color: var(--fg);
+  }
+
+  .fly-ref {
+    display: block;
+    margin-top: 2px;
+    overflow: hidden;
+    color: var(--fg-faint);
+    font-family: var(--font-code);
+    font-size: var(--fs-xs);
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 </style>

@@ -184,7 +184,12 @@
             onclick={() => jump(id)}
           >
             <span class="num" aria-hidden="true">{i + 1}</span>
-            <span class="step-text">{section.heading}</span>
+            <span class="step-text">
+              <span class="step-heading">{section.heading}</span>
+              {#if section.deck}
+                <span class="step-deck">{section.deck}</span>
+              {/if}
+            </span>
           </button>
           {#if findings > 0}
             <button
@@ -347,7 +352,7 @@
 
   .step-btn {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 6px;
     flex: 1;
     min-width: 0;
@@ -378,23 +383,61 @@
     }
   }
 
-  .step-btn.active {
+  /* Active fill paints the whole row — button AND badge sit on the ink */
+  .step.active .step-row {
     background: var(--fg);
-    color: var(--bg-raised);
     box-shadow: inset 3px 0 0 var(--accent);
+  }
+
+  .step-btn.active {
+    background: transparent;
+    color: var(--bg-raised);
+  }
+
+  .step-btn.active:hover {
+    background: transparent;
+    color: var(--bg-raised);
+  }
+
+  /* Border matches the ink fill — reads as a clean orange chip on black */
+  .step.active .badge {
+    border-color: var(--fg);
   }
 
   .step-text {
     flex: 1;
     min-width: 0;
+    line-height: 1.25;
+  }
+
+  .step-heading {
+    display: block;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    line-height: 1.25;
+  }
+
+  /* One-line deck under the heading — the rail reads as a story */
+  .step-deck {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    margin-top: 2px;
+    color: var(--fg-faint);
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 1.35;
+  }
+
+  .step-btn.active .step-deck {
+    color: color-mix(in srgb, var(--bg-raised) 72%, transparent);
   }
 
   .num {
     flex-shrink: 0;
+    margin-top: 1px;
     display: grid;
     place-items: center;
     width: 18px;

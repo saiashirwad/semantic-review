@@ -78,7 +78,7 @@
   --bg-inset: #e8e2d6; /* palette.inset */
   --bg-hover: #ddd5c6;
   --bg-panel: #fff8ec; /* palette.panel */
-  --bg-code: #0c0c0c; /* palette.codeBg */
+  --bg-code: #171512; /* palette.codeBg */
   --fg: #0a0a0a; /* palette.ink */
   --fg-muted: #2e2e2e; /* palette.inkMuted */
   --fg-faint: #5c5c5c; /* palette.inkFaint */
@@ -103,13 +103,13 @@
   --selected-soft: #c6f0dd;
   --selected-fg: #064032;
 
-  --add-bg: #082016; /* palette.addBg */
-  --del-bg: #220e0e; /* palette.delBg */
+  --add-bg: #152a1e; /* palette.addBg */
+  --del-bg: #2b1613; /* palette.delBg */
   --add-fg: #34d399; /* palette.addFg */
   --del-fg: #fb7185; /* palette.delFg */
   /* Quiet row washes — syntax tokens stay dominant */
-  --add-row: #0a1812; /* palette.addRow */
-  --del-row: #180e0e; /* palette.delRow */
+  --add-row: #1c231b; /* palette.addRow */
+  --del-row: #271916; /* palette.delRow */
 
   --sev-critical: #e03131; /* palette.sevCritical */
   --sev-major: #f54e00; /* palette.sevMajor */
@@ -196,8 +196,8 @@
     --selected-soft: #16332a;
     --selected-fg: #b8f0d4;
 
-    --add-row: #14201a;
-    --del-row: #261815;
+    --add-row: #1c231b;
+    --del-row: #271916;
     --add-fg: #34d399;
     --del-fg: #fb7185;
 
@@ -248,8 +248,8 @@
   --selected-soft: #16332a;
   --selected-fg: #b8f0d4;
 
-  --add-row: #14201a;
-  --del-row: #261815;
+  --add-row: #1c231b;
+  --del-row: #271916;
   --add-fg: #34d399;
   --del-fg: #fb7185;
 
@@ -279,7 +279,7 @@
   --bg-inset: #e8e2d6;
   --bg-hover: #ddd5c6;
   --bg-panel: #fff8ec;
-  --bg-code: #0c0c0c;
+  --bg-code: #171512;
   --fg: #0a0a0a;
   --fg-muted: #2e2e2e;
   --fg-faint: #5c5c5c;
@@ -299,8 +299,8 @@
   --selected-soft: #c6f0dd;
   --selected-fg: #064032;
 
-  --add-row: #0a1812;
-  --del-row: #180e0e;
+  --add-row: #1c231b;
+  --del-row: #271916;
   --add-fg: #34d399;
   --del-fg: #fb7185;
 
@@ -450,6 +450,14 @@ button {
 
 .jump-flash {
   animation: jump-flash 0.8s linear;
+}
+
+/* Steady preview highlight while hovering a ruler tick / margin-note marker —
+   marks the row the hovered thing points at. Unlayered, so it beats Pierre's
+   @layer row washes. */
+.peek-line {
+  background-color: color-mix(in srgb, var(--accent) 24%, transparent);
+  box-shadow: inset 3px 0 0 var(--accent);
 }
 
 @keyframes jump-flash-fade {

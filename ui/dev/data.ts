@@ -615,6 +615,7 @@ const analysis: Analysis = {
   sections: [
     {
       heading: "New retry primitive",
+      deck: "Adds withRetry with jittered backoff, retry predicate, and per-try timeout",
       intro:
         "The heart of the change is a new `src/retry.ts`: typed attempt hooks, full-jitter backoff, default retry predicate for network errors / 408 / 429 / 5xx, and `withRetry` that owns the loop + per-try abort timeout.",
       diagram: `sequenceDiagram
@@ -649,6 +650,7 @@ const analysis: Analysis = {
     },
     {
       heading: "Config surface",
+      deck: "ClientConfig grows an optional retry policy with sensible defaults",
       intro:
         "`ClientConfig` gains an optional `retry` partial. `DEFAULT_RETRY` and `resolveRetry` keep call sites short while letting tests zero out delays.",
       diagram: "",
@@ -663,6 +665,7 @@ const analysis: Analysis = {
     },
     {
       heading: "Wiring fetch + client",
+      deck: "fetchJson/fetchText route through withRetry; ApiClient logs attempts",
       intro:
         "`fetchJson` delegates to `withRetry` and accepts optional hooks. A new `fetchText` twin shares the same path. `ApiClient` records attempts for debugging and special-cases 401.",
       diagram: "",
@@ -689,6 +692,7 @@ const analysis: Analysis = {
     },
     {
       heading: "Tests & docs",
+      deck: "Covers happy path plus 503 retry; README documents the defaults",
       intro:
         "Fetch tests now cover no-retry on 404 and retry-on-503. New `retry.test.ts` unit-tests backoff bounds, the predicate, exhaustion, and `sleep`. README documents the defaults table.",
       diagram: "",
