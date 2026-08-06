@@ -1,10 +1,12 @@
 import { getContext, setContext, tick } from "svelte";
-import { SvelteSet } from "svelte/reactivity";
+import { SvelteMap, SvelteSet } from "svelte/reactivity";
 import type { Finding } from "../../src/analysis.ts";
 import type { PayloadFile, PayloadHunk, PayloadLine, ReviewPayload } from "../../src/payload.ts";
 import { formatReview, type ReviewComment, type ReviewResult } from "../../src/review.ts";
 
 export const SEVERITY_ORDER = ["critical", "major", "minor", "info"] as const;
+
+export type FindingStatus = "resolved" | "sent";
 
 export interface PendingComment {
   ref: string;
@@ -23,6 +25,16 @@ export interface HunkRef {
 
 export type FindingEntry = { finding: Finding; key: string };
 
+/** DOM anchor id for a finding location (shared by stacked findings on one line). */
+export function findingAnchorId(finding: Finding): string {
+  return finding.line == null ? `${finding.hunk_id}:hunk` : `${finding.hunk_id}:${finding.line}`;
+}
+
+/** Map key for a line within a hunk: "hunk" or the signed line number string. */
+function lineSlot(line: number | null): string {
+  return line == null ? "hunk" : String(line);
+}
+
 export class ReviewState {
   payload: ReviewPayload;
   hunkIndex: Map<string, HunkRef>;
@@ -30,8 +42,8 @@ export class ReviewState {
   activeResult = $state(0);
   diffMode = $state<"unified" | "split">("unified");
   viewedHunks = new SvelteSet<string>();
-  resolvedFindings = new SvelteSet<string>(); // keys `${resultIdx}:${findingIdx}`
-  sentFindings = new SvelteSet<string>();
+  /** open = absent; resolved | sent = terminal disposition */
+  findingStatus = new SvelteMap<string, FindingStatus>();
   comments = $state<UiComment[]>([]);
   overall = $state("");
   includeNotes = new SvelteSet<number>(); // result indices
@@ -56,6 +68,14 @@ export class ReviewState {
   }
   get multiTab() {
     return this.payload.results.length > 1;
+  }
+
+  setActiveResult(index: number) {
+    if (index === this.activeResult) return;
+    if (index < 0 || index >= this.payload.results.length) return;
+    this.activeResult = index;
+    this.openFinding = null;
+    this.composer = null;
   }
 
   // Getters (not $derived fields) because field initializers would run before
@@ -83,6 +103,27 @@ export class ReviewState {
       .sort((a, b) => SEVERITY_ORDER.indexOf(a.finding.severity) - SEVERITY_ORDER.indexOf(b.finding.severity));
   }
 
+  /**
+   * Inverted index: hunkId → lineSlot → open findings.
+   * Rebuilt from active analysis + status (cheap at review scale).
+   */
+  get findingsIndex(): Map<string, Map<string, FindingEntry[]>> {
+    const index = new Map<string, Map<string, FindingEntry[]>>();
+    for (const entry of this.sortedFindings) {
+      if (!this.isFindingOpen(entry.key)) continue;
+      const slot = lineSlot(entry.finding.line);
+      let bySlot = index.get(entry.finding.hunk_id);
+      if (!bySlot) {
+        bySlot = new Map();
+        index.set(entry.finding.hunk_id, bySlot);
+      }
+      const list = bySlot.get(slot) ?? [];
+      list.push(entry);
+      bySlot.set(slot, list);
+    }
+    return index;
+  }
+
   get openFindingCount() {
     return this.sortedFindings.filter(({ key }) => this.isFindingOpen(key)).length;
   }
@@ -92,7 +133,11 @@ export class ReviewState {
   }
 
   isFindingOpen(key: string): boolean {
-    return !this.resolvedFindings.has(key) && !this.sentFindings.has(key);
+    return !this.findingStatus.has(key);
+  }
+
+  findingDisposition(key: string): FindingStatus | null {
+    return this.findingStatus.get(key) ?? null;
   }
 
   toggleViewed(hunkId: string) {
@@ -114,17 +159,20 @@ export class ReviewState {
   // Findings of the active result anchored to a given hunk line (or the whole
   // hunk when lineIdx is null).
   findingsAt(hunkId: string, lineIdx: number | null): FindingEntry[] {
-    const entry = this.hunkIndex.get(hunkId);
-    if (!entry) return [];
-    return this.analysis.findings
-      .map((finding, index) => ({ finding, key: this.findingKey(index) }))
-      .filter(({ finding }) => {
-        if (finding.hunk_id !== hunkId) return false;
-        if (lineIdx == null) return finding.line == null;
-        if (finding.line == null) return false;
-        const line = entry.hunk.lines[lineIdx];
-        return finding.line < 0 ? line.oldNo === -finding.line : line.newNo === finding.line;
-      });
+    const bySlot = this.findingsIndex.get(hunkId);
+    if (!bySlot) return [];
+    if (lineIdx == null) return bySlot.get("hunk") ?? [];
+    const line = this.hunkIndex.get(hunkId)?.hunk.lines[lineIdx];
+    if (!line) return [];
+    // Match model line encoding: positive = newNo, negative = -oldNo.
+    const hits: FindingEntry[] = [];
+    if (line.newNo != null) hits.push(...(bySlot.get(String(line.newNo)) ?? []));
+    if (line.oldNo != null) {
+      for (const h of bySlot.get(String(-line.oldNo)) ?? []) {
+        if (!hits.some((x) => x.key === h.key)) hits.push(h);
+      }
+    }
+    return hits;
   }
 
   /** Open findings whose hunk belongs to `path` and (optionally) is in `hunkIds`. */
@@ -171,13 +219,12 @@ export class ReviewState {
   }
 
   resolveFinding(key: string) {
-    this.resolvedFindings.add(key);
+    this.findingStatus.set(key, "resolved");
     if (this.openFinding === key) this.openFinding = null;
   }
 
   reopenFinding(key: string) {
-    this.resolvedFindings.delete(key);
-    this.sentFindings.delete(key);
+    this.findingStatus.delete(key);
   }
 
   // Converts a finding into a regular review comment so it flows through the
@@ -193,14 +240,17 @@ export class ReviewState {
       text,
       backend: this.result.backend,
     });
-    this.sentFindings.add(key);
+    this.findingStatus.set(key, "sent");
     if (this.openFinding === key) this.openFinding = null;
   }
 
   async jumpToFinding(key: string) {
     this.openFinding = key;
     await tick();
-    const anchor = document.querySelector(`[data-finding-line="${CSS.escape(key)}"]`);
+    const entry = this.sortedFindings.find((e) => e.key === key);
+    if (!entry) return;
+    const loc = findingAnchorId(entry.finding);
+    const anchor = document.querySelector(`[data-finding-anchor="${CSS.escape(loc)}"]`);
     if (!anchor) return;
     const details = anchor.closest("details");
     if (details) details.open = true;

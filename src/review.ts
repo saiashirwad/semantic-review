@@ -1,15 +1,22 @@
-export interface ReviewComment {
-  ref: string;
-  quote?: string;
-  text: string;
-  backend?: string;
-}
+import { z } from "zod";
 
-export interface ReviewResult {
-  comments: ReviewComment[];
-  overall: string;
-  notes?: { backend: string; items: string[] }[];
-}
+export const ReviewCommentSchema = z.object({
+  ref: z.string(),
+  quote: z.string().optional(),
+  text: z.string(),
+  backend: z.string().optional(),
+});
+
+export const ReviewResultSchema = z.object({
+  comments: z.array(ReviewCommentSchema).default([]),
+  overall: z.string().default(""),
+  notes: z
+    .array(z.object({ backend: z.string(), items: z.array(z.string()) }))
+    .optional(),
+});
+
+export type ReviewComment = z.infer<typeof ReviewCommentSchema>;
+export type ReviewResult = z.infer<typeof ReviewResultSchema>;
 
 // Kept platform-neutral (no node APIs) — the browser bundle in ui/ imports
 // this directly so exported reports can format feedback client-side.

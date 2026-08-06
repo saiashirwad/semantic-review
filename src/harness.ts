@@ -1,4 +1,4 @@
-import { analysisPrompt, extractAnalysis } from "./analysis.ts";
+import { analysisPrompt, parseAnalysis } from "./analysis.ts";
 import type { AnalyzeOpts, Backend } from "./backends.ts";
 import { run } from "./proc.ts";
 
@@ -79,7 +79,7 @@ export function harnessBackend(def: HarnessDefinition, runner: Runner = run): Ba
         result = await runner(def.argv(opts), prompt);
       }
       if (result.code !== 0) throw new Error(`${def.name} exited ${result.code}: ${result.stderr.slice(0, 500)}`);
-      return extractAnalysis(result.stdout);
+      return parseAnalysis(result.stdout);
     },
   };
 }

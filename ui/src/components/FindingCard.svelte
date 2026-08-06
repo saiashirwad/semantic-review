@@ -5,11 +5,10 @@
   const { finding, key }: { finding: Finding; key: string } = $props();
   const review = getReviewState();
 
-  const resolved = $derived(review.resolvedFindings.has(key));
-  const sent = $derived(review.sentFindings.has(key));
+  const disposition = $derived(review.findingDisposition(key));
 </script>
 
-<div class="card" class:muted={resolved || sent}>
+<div class="card" class:muted={disposition != null}>
   <button class="body" onclick={() => review.jumpToFinding(key)} title="Jump to code">
     <span class="sev sev-{finding.severity}" title={finding.severity}></span>
     <span class="text">
@@ -17,9 +16,9 @@
       <span class="ref">{review.refForFinding(finding)}</span>
     </span>
   </button>
-  {#if sent || resolved}
+  {#if disposition}
     <div class="status">
-      <span class="state-tag">{sent ? "in review" : "resolved"}</span>
+      <span class="state-tag">{disposition === "sent" ? "in review" : "resolved"}</span>
       <button class="undo" onclick={() => review.reopenFinding(key)}>Undo</button>
     </div>
   {/if}

@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Finding } from "../../../src/analysis.ts";
-  import { getReviewState } from "../state.svelte.ts";
+  import { findingAnchorId, getReviewState } from "../state.svelte.ts";
   import { startPopoverDrag } from "../popover-drag.ts";
   import {
     computePopoverPos,
@@ -34,8 +34,9 @@
   let userDragged = $state(false);
 
   function anchorEl(): HTMLElement | null {
+    const loc = findingAnchorId(finding);
     return pickVisibleAnchor(
-      document.querySelectorAll<HTMLElement>(`[data-finding-line="${CSS.escape(key)}"]`),
+      document.querySelectorAll<HTMLElement>(`[data-finding-anchor="${CSS.escape(loc)}"]`),
       window.innerHeight,
     );
   }

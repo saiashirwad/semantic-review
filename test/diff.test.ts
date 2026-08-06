@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { diffForModel, hunkById, parseDiff } from "../src/diff.ts";
+import { diffForModel, hunkById, parseDiff, summarizeChange } from "../src/diff.ts";
 
 const MODIFIED = `diff --git a/src/greet.ts b/src/greet.ts
 index 1234567..89abcde 100644
@@ -86,3 +86,10 @@ describe("diffForModel", () => {
     expect(out).toContain('2|+  if (!name.trim()) throw new Error("blank name");');
   });
 });
+
+describe("summarizeChange", () => {
+  test("pluralizes hunks and files", () => {
+    expect(summarizeChange(parseDiff(MODIFIED))).toBe("1 hunk across 1 file");
+  });
+});
+

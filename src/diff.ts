@@ -82,6 +82,26 @@ export function hunkById(files: DiffFile[]): Map<string, { file: DiffFile; hunk:
   return map;
 }
 
+/** e.g. "3 hunks across 2 files" — shared by CLI stderr and the HTML payload. */
+export function summarizeChange(files: DiffFile[]): string {
+  const hunkCount = files.reduce((n, f) => n + f.hunks.length, 0);
+  return `${hunkCount} hunk${hunkCount === 1 ? "" : "s"} across ${files.length} file${files.length === 1 ? "" : "s"}`;
+}
+
+/** Whether a hunk contains the line number used by snippets/findings (new-file, or old when no new). */
+export function hunkHasLine(hunk: Hunk, line: number): boolean {
+  if (line < 0) return hunk.lines.some((l) => l.oldNo === -line);
+  return hunk.lines.some((l) => l.newNo === line);
+}
+
+/** Whether any hunk line falls in [from, to] (new-file preferred, else old). */
+export function hunkHasRange(hunk: Hunk, from: number, to: number): boolean {
+  return hunk.lines.some((l) => {
+    const no = l.newNo ?? l.oldNo;
+    return no != null && no >= from && no <= to;
+  });
+}
+
 // The annotated diff we show the model: every hunk labeled with its id.
 export function diffForModel(files: DiffFile[]): string {
   const parts: string[] = [];

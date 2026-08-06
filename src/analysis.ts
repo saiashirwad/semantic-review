@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { hunkById, hunkHasLine, hunkHasRange, type DiffFile } from "./diff.ts";
 
 export const SEVERITIES = ["critical", "major", "minor", "info"] as const;
 
@@ -96,8 +97,8 @@ The diff:
 ${annotatedDiff}`;
 }
 
-// Lenient JSON extraction for CLI backends that may wrap output in prose or fences.
-export function extractAnalysis(raw: string): Analysis {
+/** Pull a JSON object string out of model/CLI output (fences, trailing prose). */
+export function extractJsonObject(raw: string): string {
   let text = raw.trim();
   const fence = text.match(/```(?:json)?\s*([\s\S]*?)```/);
   if (fence) text = fence[1].trim();
@@ -107,5 +108,48 @@ export function extractAnalysis(raw: string): Analysis {
     if (start === -1 || end === -1) throw new Error(`no JSON object found in output:\n${raw.slice(0, 500)}`);
     text = text.slice(start, end + 1);
   }
-  return AnalysisInputSchema.parse(JSON.parse(text));
+  return text;
+}
+
+/**
+ * Single normalizer for every analysis path (API, harness, --analysis).
+ * Accepts pure JSON or fence-wrapped CLI prose; always applies AnalysisInputSchema.
+ */
+export function parseAnalysis(raw: string): Analysis {
+  return AnalysisInputSchema.parse(JSON.parse(extractJsonObject(raw)));
+}
+
+/** @deprecated Prefer parseAnalysis — kept as an alias for harness call sites. */
+export const extractAnalysis = parseAnalysis;
+
+/**
+ * Drop or repair model refs that don't exist in the real diff so the UI never
+ * shows "unknown hunk" for inventing ids. Shared by the CLI and evals.
+ */
+export function bindAnalysis(analysis: Analysis, files: DiffFile[]): Analysis {
+  const hunks = hunkById(files);
+
+  const sections = analysis.sections.map((section) => ({
+    ...section,
+    snippets: section.snippets
+      .filter((s) => hunks.has(s.hunk_id))
+      .map((s) => {
+        if (s.from == null || s.to == null) return s;
+        const entry = hunks.get(s.hunk_id)!;
+        if (hunkHasRange(entry.hunk, s.from, s.to)) return s;
+        // Range misses the hunk — fall back to the whole hunk rather than blank UI.
+        return { ...s, from: null, to: null };
+      }),
+  }));
+
+  const findings = analysis.findings
+    .filter((f) => hunks.has(f.hunk_id))
+    .map((f) => {
+      if (f.line == null) return f;
+      const entry = hunks.get(f.hunk_id)!;
+      if (hunkHasLine(entry.hunk, f.line)) return f;
+      return { ...f, line: null };
+    });
+
+  return { ...analysis, sections, findings };
 }

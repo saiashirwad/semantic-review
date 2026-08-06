@@ -30,7 +30,7 @@
     "test": "bun test",
     "eval": "bun evals/run.ts",
     "typecheck": "tsc --noEmit",
-    "check:ui": "svelte-check --workspace ui --tsconfig ./tsconfig.json"
+    "check:ui": "svelte-check --tsconfig ui/tsconfig.json"
   },
   "dependencies": {
     "beautiful-mermaid": "^1.1.3",

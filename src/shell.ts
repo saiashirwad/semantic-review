@@ -1,5 +1,5 @@
 import { readFile } from "node:fs/promises";
-import { esc } from "./highlight.ts";
+import { esc } from "./html.ts";
 import type { ReviewPayload } from "./payload.ts";
 
 export interface UiAssets {

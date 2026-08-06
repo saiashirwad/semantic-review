@@ -4,9 +4,9 @@
 // narrative report, serves it for human review, and prints the feedback to
 // stdout when the reviewer clicks Done.
 
-import { parseDiff, diffForModel } from "./diff.ts";
+import { parseDiff, diffForModel, summarizeChange } from "./diff.ts";
 import { resolveBackends, runBackends, BACKENDS } from "./backends.ts";
-import { AnalysisInputSchema, analysisPrompt, type AnalysisResult } from "./analysis.ts";
+import { AnalysisInputSchema, analysisPrompt, bindAnalysis, type AnalysisResult } from "./analysis.ts";
 import { getGitDiff } from "./git.ts";
 import { buildReviewPayload } from "./payload.ts";
 import { loadUiAssets, renderShell } from "./shell.ts";
@@ -50,12 +50,24 @@ async function getDiff(gitArgs: string[]): Promise<string> {
   return getGitDiff(gitArgs);
 }
 
+function warnUnusedEffort(backendNames: string[], effort: Effort | undefined) {
+  if (!effort) return;
+  const unsupported = backendNames.filter((n) => n !== "anthropic");
+  if (unsupported.length === 0) return;
+  console.error(
+    `semantic-review: --effort is only applied by the anthropic backend; ignored for: ${unsupported.join(", ")}`,
+  );
+}
+
 async function main() {
   const argv = process.argv.slice(2);
   if (argv.includes("-h") || argv.includes("--help")) {
     console.log(USAGE);
     return;
   }
+  // UI assets are independent of analysis — load while the model works.
+  const assetsP = loadUiAssets();
+
   const config = await loadConfig();
   const gitArgs: string[] = [];
   let withBackends: string[] | null = configuredBackends(config.backend);
@@ -101,12 +113,11 @@ async function main() {
 
   const diff = await getDiff(gitArgs);
   const files = parseDiff(diff);
-  const hunkCount = files.reduce((n, f) => n + f.hunks.length, 0);
-  if (hunkCount === 0) {
+  if (files.reduce((n, f) => n + f.hunks.length, 0) === 0) {
     console.error("semantic-review: no changes to review");
     process.exit(1);
   }
-  const changeSummary = `${hunkCount} hunk${hunkCount === 1 ? "" : "s"} across ${files.length} file${files.length === 1 ? "" : "s"}`;
+  const changeSummary = summarizeChange(files);
 
   const annotated = diffForModel(files);
   if (emitPrompt) {
@@ -116,16 +127,27 @@ async function main() {
 
   let results: AnalysisResult[];
   if (analysisPath) {
-    const analysis = AnalysisInputSchema.parse(JSON.parse(await readFile(analysisPath, "utf8")));
+    const analysis = bindAnalysis(
+      AnalysisInputSchema.parse(JSON.parse(await readFile(analysisPath, "utf8"))),
+      files,
+    );
     results = [{ backend: "host", analysis }];
     console.error(`semantic-review: rendering caller analysis for ${changeSummary}…`);
   } else {
     const backends = await resolveBackends(withBackends);
+    warnUnusedEffort(
+      backends.map((b) => b.name),
+      effort,
+    );
     console.error(`semantic-review: analyzing ${changeSummary} with ${backends.map((b) => b.name).join(", ")}…`);
     results = await runBackends(backends, annotated, { model, effort });
+    results = results.map((r) => ({ ...r, analysis: bindAnalysis(r.analysis, files) }));
   }
-  const payload = await buildReviewPayload(results, files, exportPath ? "export" : "server");
-  const html = renderShell(payload, await loadUiAssets());
+  const [payload, assets] = await Promise.all([
+    buildReviewPayload(results, files, exportPath ? "export" : "server"),
+    assetsP,
+  ]);
+  const html = renderShell(payload, assets);
   if (exportPath) {
     console.log(await exportReview(exportPath, html));
     return;

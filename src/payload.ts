@@ -1,6 +1,7 @@
 import { renderMermaidSVG } from "beautiful-mermaid";
 import type { AnalysisResult } from "./analysis.ts";
 import type { DiffFile, DiffLine } from "./diff.ts";
+import { summarizeChange } from "./diff.ts";
 import { DIAGRAM_RENDER_OPTIONS, polishDiagramSvg } from "./diagram-theme.ts";
 import { highlightHunk, makeHighlighter } from "./highlight.ts";
 
@@ -8,13 +9,9 @@ import { highlightHunk, makeHighlighter } from "./highlight.ts";
 // embedded in the HTML shell as window.__REVIEW_DATA__ and consumed by the
 // Svelte app in ui/.
 
-export interface PayloadLine {
-  kind: DiffLine["kind"];
-  oldNo: number | null;
-  newNo: number | null;
-  text: string;
+export type PayloadLine = DiffLine & {
   html: string; // shiki token spans, safe for innerHTML
-}
+};
 
 export interface PayloadHunk {
   id: string;
@@ -90,12 +87,11 @@ export async function buildReviewPayload(
     },
   }));
 
-  const hunkCount = files.reduce((n, f) => n + f.hunks.length, 0);
   return {
     version: 1,
     mode,
     title: results[0].analysis.title,
-    changeSummary: `${hunkCount} hunk${hunkCount === 1 ? "" : "s"} across ${files.length} file${files.length === 1 ? "" : "s"}`,
+    changeSummary: summarizeChange(files),
     totalChangedLines: payloadFiles.reduce((n, f) => n + f.adds + f.dels, 0),
     results: payloadResults,
     files: payloadFiles,

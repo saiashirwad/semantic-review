@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { PayloadFile, PayloadHunk, PayloadLine } from "../../../src/payload.ts";
-  import { getReviewState } from "../state.svelte.ts";
+  import { findingAnchorId, getReviewState } from "../state.svelte.ts";
   import Check from "./Check.svelte";
 
   interface Props {
@@ -65,10 +65,6 @@
     return rows;
   });
 
-  function refFor(line: PayloadLine): string {
-    return line.newNo != null ? `${file.path}:${line.newNo}` : `${file.path}:${line.oldNo} (old)`;
-  }
-
   /** One number column: new line for adds/context, old line for dels. */
   function lineNo(line: PayloadLine, side: "left" | "right" | "unified"): string | number {
     if (side === "left") return line.oldNo ?? "";
@@ -83,15 +79,19 @@
   }
 
   function flagsFor(idx: number) {
-    return review.findingsAt(hunk.id, idx).filter(({ key }) => review.isFindingOpen(key));
+    return review.findingsAt(hunk.id, idx);
   }
 
-  function openComment(line: PayloadLine, e: MouseEvent) {
+  function openComment(line: PayloadLine, idx: number, e: MouseEvent) {
     const rect = (e.currentTarget as HTMLElement).closest("tr")!.getBoundingClientRect();
-    review.openComposer(refFor(line), line.text, {
+    review.openComposer(review.refForLine(hunk.id, idx), line.text, {
       html: line.html,
       anchor: { left: rect.left + window.scrollX, top: rect.bottom + window.scrollY },
     });
+  }
+
+  function anchorForFlags(flags: ReturnType<typeof flagsFor>): string {
+    return findingAnchorId(flags[0].finding);
   }
 
   function toggleFinding(key: string, e: MouseEvent) {
@@ -100,20 +100,20 @@
     review.openFinding = review.openFinding === key ? null : key;
   }
 
-  const hunkFlags = $derived(review.findingsAt(hunk.id, null).filter(({ key }) => review.isFindingOpen(key)));
+  const hunkFlags = $derived(review.findingsAt(hunk.id, null));
 </script>
 
 {#snippet gutterFlag(idx: number)}
   {@const flags = flagsFor(idx)}
   {#if flags.length > 0}
-    <span class="flag-anchor" data-finding-line={flags[0].key}>
+    <span class="flag-anchor" data-finding-anchor={anchorForFlags(flags)}>
       <button
         type="button"
         class="flag"
         title={flags.map((f) => f.finding.title).join("\n")}
         onclick={(e) => toggleFinding(flags[0].key, e)}
       >
-        !
+        {flags.length > 1 ? flags.length : "!"}
       </button>
     </span>
   {/if}
@@ -124,7 +124,7 @@
     {@const { line, idx } = entry}
     <!-- Combined gutter: line number + sign; comment on hover -->
     <td class="gutter {line.kind}">
-      <button class="lc" title="Comment on this line" onclick={(e) => openComment(line, e)}>+</button>
+      <button class="lc" title="Comment on this line" onclick={(e) => openComment(line, idx, e)}>+</button>
       {@render gutterFlag(idx)}
       <span class="num">{lineNo(line, side)}</span>
       <span class="sign">{sign(line)}</span>
@@ -152,7 +152,7 @@
     <span class="header" class:solo={embedded}>{hunk.header}</span>
     <span class="spacer-flex"></span>
     {#if hunkFlags.length > 0}
-      <span class="flag-anchor" data-finding-line={hunkFlags[0].key}>
+      <span class="flag-anchor" data-finding-anchor={anchorForFlags(hunkFlags)}>
         <button
           type="button"
           class="flag wide"

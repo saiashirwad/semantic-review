@@ -3,10 +3,9 @@
 
   const review = getReviewState();
 
+  /** Document coords for the bubble (pointer release); also seeds the composer. */
   let pos = $state<{ left: number; top: number } | null>(null);
   let lineCount = $state(1);
-  // Document coords where the pointer released — bubble + composer open here.
-  let pointer = $state<{ left: number; top: number } | null>(null);
 
   const BUBBLE_W = 140; // approx width for edge clamping
   const BUBBLE_H = 34;
@@ -90,12 +89,10 @@
       const measured = measureSelection();
       if (!measured) {
         pos = null;
-        pointer = null;
         lineCount = 1;
         return;
       }
       lineCount = measured.lines;
-      pointer = mouse;
       pos = clampPos(mouse.left, mouse.top);
     }, 0);
   }
@@ -104,9 +101,8 @@
     const measured = measureSelection();
     if (!measured) return;
     const sel = window.getSelection();
-    const anchor = pointer ?? pos;
+    const anchor = pos;
     pos = null;
-    pointer = null;
     sel?.removeAllRanges();
     review.openComposer(measured.ref, measured.quote, {
       html: measured.html,
@@ -122,10 +118,7 @@
   function dismiss(e: MouseEvent) {
     const target = e.target as Element;
     if (target.closest(".bubble") || target.closest(".composer") || target.closest(".float")) return;
-    if (pos) {
-      pos = null;
-      pointer = null;
-    }
+    if (pos) pos = null;
   }
 </script>
 

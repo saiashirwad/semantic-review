@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { AnalysisSchema, analysisPrompt, type Analysis, type AnalysisResult } from "./analysis.ts";
+import { AnalysisSchema, analysisPrompt, parseAnalysis, type Analysis, type AnalysisResult } from "./analysis.ts";
 import type { Effort } from "./config.ts";
 import { HARNESSES, harnessBackend } from "./harness.ts";
 
@@ -61,7 +61,7 @@ const anthropicBackend: Backend = {
     })) as { content?: { type: string; text?: string }[]; stop_reason?: string };
     const text = response.content?.find((block) => block.type === "text")?.text;
     if (!text) throw new Error(`no text in response (stop_reason: ${response.stop_reason ?? "unknown"})`);
-    return AnalysisSchema.parse(JSON.parse(text));
+    return parseAnalysis(text);
   },
 };
 
@@ -83,7 +83,7 @@ const openaiBackend: Backend = {
       ?.find((item) => item.type === "message")
       ?.content?.find((item) => item.type === "output_text")?.text;
     if (!text) throw new Error("no text in response");
-    return AnalysisSchema.parse(JSON.parse(text));
+    return parseAnalysis(text);
   },
 };
 

@@ -3,11 +3,16 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 // Guards the packaged artifact: the built bundle must be loadable and carry
-// no remote URLs (exported reports must work fully offline). Skipped when
-// the UI has not been built (`bun run build:ui`).
+// no remote URLs (exported reports must work fully offline).
 const appPath = join(import.meta.dir, "../dist/ui/app.js");
 const cssPath = join(import.meta.dir, "../dist/ui/style.css");
 const built = existsSync(appPath) && existsSync(cssPath);
+// In CI the UI is built before `bun test`; missing assets are a real failure.
+const required = process.env.CI === "true" || process.env.CI === "1";
+
+if (required && !built) {
+  throw new Error("dist/ui missing in CI — run `bun run build:ui` before tests");
+}
 
 describe.skipIf(!built)("built UI bundle", () => {
   test("contains no remote asset URLs", () => {

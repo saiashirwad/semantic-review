@@ -7,6 +7,7 @@ import {
 } from "shiki";
 import type { DiffFile, Hunk } from "./diff.ts";
 import { CODE_THEME_NAME, neobrutalTheme } from "./code-theme.ts";
+import { esc } from "./html.ts";
 
 const LANG_BY_EXT: Record<string, BundledLanguage> = {
   ts: "typescript", tsx: "tsx", js: "javascript", jsx: "jsx", mjs: "javascript", cjs: "javascript",
@@ -23,8 +24,7 @@ export function langFor(path: string): BundledLanguage | "text" {
   return lang && lang in bundledLanguages ? lang : "text";
 }
 
-export const esc = (s: string) =>
-  s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+export { esc } from "./html.ts";
 
 /** Single-theme tokens: color only (no dual-theme htmlStyle objects). */
 function tokenStyle(token: Pick<ThemedToken, "color">): string {

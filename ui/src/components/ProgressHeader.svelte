@@ -7,6 +7,21 @@
 
 <header>
   <h1>{review.payload.title}</h1>
+  {#if review.multiTab}
+    <div class="tabs" role="tablist" aria-label="Analysis backend">
+      {#each review.payload.results as result, i}
+        <button
+          type="button"
+          role="tab"
+          class:active={review.activeResult === i}
+          aria-selected={review.activeResult === i}
+          onclick={() => review.setActiveResult(i)}
+        >
+          {result.backend}
+        </button>
+      {/each}
+    </div>
+  {/if}
   <span class="progress" title="Files fully viewed · lines not yet viewed">
     <b>{review.viewedFileCount}</b>/{fileCount} files
     <span class="dot">·</span>
@@ -46,6 +61,42 @@
     letter-spacing: -0.015em;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  .tabs {
+    display: inline-flex;
+    flex-shrink: 0;
+    border: var(--border-w) solid var(--border);
+    background: var(--bg-inset);
+    overflow: hidden;
+  }
+
+  .tabs button {
+    height: 28px;
+    padding: 0 10px;
+    border: 0;
+    border-right: var(--border-w) solid var(--border);
+    border-radius: 0;
+    background: transparent;
+    color: var(--fg-muted);
+    font-size: var(--fs-xs);
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    text-transform: lowercase;
+  }
+
+  .tabs button:last-child {
+    border-right: 0;
+  }
+
+  .tabs button:hover {
+    color: var(--fg);
+    background: var(--bg-hover);
+  }
+
+  .tabs button.active {
+    background: var(--fg);
+    color: var(--bg-raised);
   }
 
   .progress {
