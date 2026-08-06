@@ -12,17 +12,6 @@
     <span class="dot">·</span>
     <b>{review.linesLeft.toLocaleString()}</b> lines left
   </span>
-  {#if review.multiTab}
-    <select
-      title="Analysis by"
-      value={String(review.activeResult)}
-      onchange={(e) => (review.activeResult = Number(e.currentTarget.value))}
-    >
-      {#each review.payload.results as result, i}
-        <option value={String(i)}>{result.backend}</option>
-      {/each}
-    </select>
-  {/if}
   <div class="toggle" role="group" aria-label="Diff layout">
     <button class:active={review.diffMode === "unified"} onclick={() => (review.diffMode = "unified")}>
       Unified
@@ -53,6 +42,8 @@
     overflow: hidden;
     font-size: var(--fs-md);
     font-weight: 600;
+    line-height: var(--lh-tight);
+    letter-spacing: -0.015em;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
@@ -73,17 +64,6 @@
   .dot {
     margin: 0 2px;
     color: var(--fg-faint);
-  }
-
-  select {
-    height: 30px;
-    padding: 0 8px;
-    border: var(--border-w) solid var(--border);
-    border-radius: var(--radius);
-    background: var(--bg-raised);
-    font-size: var(--fs-sm);
-    font-weight: 500;
-    box-shadow: var(--shadow-btn);
   }
 
   .toggle {

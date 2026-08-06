@@ -31,8 +31,8 @@
 
 <style>
   .notes {
-    margin-top: 32px;
-    padding: 14px 16px;
+    margin-top: var(--space-6);
+    padding: var(--space-4) var(--space-5);
     border: var(--border-w) solid var(--border);
     background: var(--bg-raised);
     box-shadow: var(--shadow-card);
@@ -42,26 +42,33 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
+    gap: var(--space-3);
+    margin-bottom: var(--space-2);
   }
 
   h2 {
     margin: 0;
     font-size: var(--fs-xs);
     font-weight: 700;
-    letter-spacing: 0.06em;
+    letter-spacing: 0.1em;
     text-transform: uppercase;
+    line-height: var(--lh-tight);
     color: var(--fg-muted);
   }
 
   ul {
-    margin: 10px 0 0;
-    padding-left: 18px;
+    margin: var(--space-3) 0 0;
+    padding-left: 1.25em;
   }
 
   li {
-    margin: 4px 0;
+    margin: 0.45em 0;
     color: var(--fg-muted);
     font-size: var(--fs-sm);
+    line-height: var(--lh);
+  }
+
+  li + li {
+    margin-top: 0.65em;
   }
 </style>

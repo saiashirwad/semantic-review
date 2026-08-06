@@ -42,12 +42,12 @@
     overflow-x: visible;
     overflow-y: auto;
     /* Extra right/bottom padding so hard offset shadows aren't clipped */
-    padding: 16px 16px 24px 8px;
+    padding: var(--space-4) var(--space-4) var(--space-5) var(--space-2);
   }
 
   .findings-box {
     width: 100%;
-    margin-bottom: 20px;
+    margin-bottom: var(--space-5);
     border: var(--border-w) solid var(--border);
     background: var(--bg-raised);
     box-shadow: var(--shadow-card);
@@ -104,12 +104,17 @@
   }
 
   h3 {
-    margin: 0 0 8px;
+    margin: var(--space-4) 0 var(--space-2);
     color: var(--fg-faint);
     font-size: var(--fs-xs);
     font-weight: 700;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.1em;
     text-transform: uppercase;
+    line-height: var(--lh-tight);
+  }
+
+  h3:first-of-type {
+    margin-top: 0;
   }
 
   h3:not(:first-child) {

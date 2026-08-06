@@ -1,11 +1,14 @@
 <script lang="ts">
   import { getReviewState } from "../state.svelte";
+  import { startPopoverDrag, type Point } from "../popover-drag";
 
   const review = getReviewState();
 
   let text = $state("");
   let textareaEl = $state<HTMLTextAreaElement | null>(null);
   let boxEl = $state<HTMLElement | null>(null);
+  /** Once the user drags, we stop re-deriving position from the anchor. */
+  let dragPos = $state<Point | null>(null);
 
   const WIDTH = 440;
   const EST_HEIGHT = 280;
@@ -16,28 +19,46 @@
     return q.split("\n").length;
   });
 
-  const style = $derived.by(() => {
+  const basePos = $derived.by((): Point => {
     const anchor = review.composer?.anchor;
-    if (!anchor) return "position: fixed; right: 24px; bottom: 20px;";
+    if (!anchor) {
+      return {
+        left: window.scrollX + document.documentElement.clientWidth - WIDTH - 24,
+        top: window.scrollY + window.innerHeight - EST_HEIGHT - 20,
+      };
+    }
     const left = Math.max(8, Math.min(anchor.left, document.documentElement.clientWidth - WIDTH - 8));
     const height = boxEl?.offsetHeight ?? EST_HEIGHT;
     const viewportBottom = window.scrollY + window.innerHeight;
     let top = anchor.top + 8;
     if (top + height > viewportBottom - 8) top = anchor.top - height - 12;
     top = Math.max(window.scrollY + 8, top);
-    return `left: ${left}px; top: ${top}px;`;
+    return { left, top };
   });
+
+  const pos = $derived(dragPos ?? basePos);
+
+  const style = $derived(`left: ${pos.left}px; top: ${pos.top}px;`);
 
   $effect(() => {
     if (review.composer) {
       text = "";
-      // Defer focus so the box is in the DOM
+      dragPos = null;
       requestAnimationFrame(() => {
         textareaEl?.focus();
-        boxEl?.scrollIntoView({ behavior: "smooth", block: "nearest" });
       });
     }
   });
+
+  function onDragStart(e: PointerEvent) {
+    const h = boxEl?.offsetHeight ?? EST_HEIGHT;
+    const w = boxEl?.offsetWidth ?? WIDTH;
+    startPopoverDrag(e, pos, (p) => (dragPos = p), {
+      mode: "absolute",
+      width: w,
+      height: h,
+    });
+  }
 
   function onkeydown(e: KeyboardEvent) {
     if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
@@ -53,15 +74,24 @@
 </script>
 
 {#if review.composer}
-  <div
-    class="composer"
-    class:anchored={!!review.composer.anchor}
-    {style}
-    bind:this={boxEl}
-    role="dialog"
-    aria-label="Add comment"
-  >
+  <div class="composer" {style} bind:this={boxEl} role="dialog" aria-label="Add comment">
     <header class="head">
+      <button
+        type="button"
+        class="grip"
+        title="Drag to move"
+        aria-label="Drag to move"
+        onpointerdown={onDragStart}
+      >
+        <svg width="12" height="14" viewBox="0 0 12 14" aria-hidden="true">
+          <circle cx="3" cy="2" r="1.4" fill="currentColor" />
+          <circle cx="9" cy="2" r="1.4" fill="currentColor" />
+          <circle cx="3" cy="7" r="1.4" fill="currentColor" />
+          <circle cx="9" cy="7" r="1.4" fill="currentColor" />
+          <circle cx="3" cy="12" r="1.4" fill="currentColor" />
+          <circle cx="9" cy="12" r="1.4" fill="currentColor" />
+        </svg>
+      </button>
       <span class="kicker">Comment</span>
       <button type="button" class="close" title="Close (Esc)" onclick={() => (review.composer = null)}>
         ✕
@@ -125,24 +155,52 @@
     background: var(--bg-raised);
     color: var(--fg);
     box-shadow: var(--shadow-pop);
-    /* Kill any inherited dark-code text from hunk ancestors */
     font-family: var(--font-ui);
   }
 
-  /* ── Header: warm panel (readable on dark code + paper) ─── */
   .head {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 10px;
+    gap: 8px;
     min-height: 36px;
-    padding: 0 10px 0 14px;
+    padding: 0 8px 0 6px;
     border-bottom: var(--border-w) solid var(--border);
     background: var(--bg-panel);
+    color: var(--fg);
+    user-select: none;
+  }
+
+  .grip {
+    flex-shrink: 0;
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    margin: 0;
+    padding: 0;
+    border: 2px solid transparent;
+    background: transparent;
+    color: var(--fg-faint);
+    cursor: grab;
+    touch-action: none;
+  }
+
+  .grip:hover {
+    border-color: var(--border);
+    background: var(--bg-hover);
+    color: var(--fg);
+  }
+
+  .grip:global(.dragging),
+  .grip:active {
+    cursor: grabbing;
+    border-color: var(--border);
+    background: var(--bg-hover);
     color: var(--fg);
   }
 
   .kicker {
+    flex: 1;
     color: var(--accent);
     font-size: var(--fs-xs);
     font-weight: 700;
@@ -179,7 +237,6 @@
     padding: 14px;
   }
 
-  /* ── File ref + line chip ───────────────────────────────── */
   .meta {
     display: flex;
     align-items: center;
@@ -212,7 +269,6 @@
     box-shadow: 2px 2px 0 var(--border);
   }
 
-  /* ── Code quote as a hard code window ───────────────────── */
   .quote-frame {
     display: flex;
     overflow: hidden;
@@ -260,7 +316,6 @@
     word-break: break-word;
   }
 
-  /* ── Textarea field ─────────────────────────────────────── */
   .field {
     display: flex;
     flex-direction: column;
@@ -303,7 +358,6 @@
     box-shadow: inset 3px 0 0 var(--accent);
   }
 
-  /* ── Footer ─────────────────────────────────────────────── */
   .foot {
     display: flex;
     align-items: center;

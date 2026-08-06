@@ -41,44 +41,59 @@
 
 <style>
   section {
-    margin-top: 32px;
+    width: 100%;
+    margin-top: var(--space-6);
     /* Sticky header offset for sidebar jump / scrollIntoView */
-    scroll-margin-top: calc(var(--header-h) + 12px);
+    scroll-margin-top: calc(var(--header-h) + var(--space-3));
   }
 
   h2 {
     display: flex;
     align-items: center;
-    gap: 10px;
-    margin: 0 0 6px;
+    gap: var(--space-3);
+    margin: 0 0 var(--space-3);
     font-size: var(--fs-lg);
     font-weight: 700;
+    line-height: var(--lh-tight);
+    letter-spacing: -0.02em;
   }
 
   .num {
     flex-shrink: 0;
-    width: 24px;
-    height: 24px;
+    width: 26px;
+    height: 26px;
     border: var(--border-w) solid var(--border);
     background: var(--bg-raised);
     color: var(--fg);
+    font-family: var(--font-code);
     font-size: var(--fs-sm);
     font-weight: 700;
-    line-height: 20px;
+    line-height: 22px;
     text-align: center;
   }
 
   .intro {
+    width: 100%;
+    max-width: none;
+    margin-bottom: var(--space-2);
     color: var(--fg-muted);
     font-size: var(--fs-md);
+    font-weight: 400;
+    line-height: var(--lh-prose);
+    letter-spacing: -0.01em;
+  }
+
+  .intro :global(p) {
+    width: 100%;
+    max-width: none;
   }
 
   /* Bridge caption between code excerpts — hard card, not a soft callout */
   .note {
     display: flex;
-    align-items: flex-start;
-    gap: 12px;
-    margin: 10px 0 16px;
+    align-items: stretch;
+    gap: 0;
+    margin: var(--space-3) 0 var(--space-4);
     padding: 0;
     overflow: hidden;
     border: var(--border-w) solid var(--border);
@@ -88,11 +103,10 @@
 
   .note-kicker {
     flex-shrink: 0;
-    align-self: stretch;
     display: grid;
     place-items: center;
-    min-width: 52px;
-    padding: 10px 8px;
+    min-width: 56px;
+    padding: var(--space-3) var(--space-2);
     border-right: var(--border-w) solid var(--border);
     background: var(--accent);
     color: var(--accent-fg);
@@ -100,17 +114,17 @@
     font-weight: 700;
     letter-spacing: 0.1em;
     text-transform: uppercase;
-    line-height: 1.2;
+    line-height: var(--lh-tight);
   }
 
   .note-body {
     flex: 1;
     min-width: 0;
-    padding: 10px 14px 10px 0;
+    padding: var(--space-3) var(--space-4);
     color: var(--fg);
     font-size: var(--fs-sm);
     font-weight: 500;
-    line-height: 1.45;
+    line-height: var(--lh);
   }
 
   .note-body :global(p) {

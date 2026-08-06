@@ -11,6 +11,7 @@
   import NotesCard from "./components/NotesCard.svelte";
   import Diagram from "./components/Diagram.svelte";
   import Finished from "./components/Finished.svelte";
+  import FindingPopover from "./components/FindingPopover.svelte";
   import Prose from "./components/Prose.svelte";
 
   const { payload }: { payload: ReviewPayload } = $props();
@@ -18,6 +19,14 @@
   // svelte-ignore state_referenced_locally
   const review = new ReviewState(payload);
   provideReviewState(review);
+
+  // One global finding popover — DiffViews only set the flag anchors; mounting
+  // a popover in every excerpt + full-diff copy of a hunk created duplicates.
+  const openFindingEntry = $derived(
+    review.openFinding
+      ? review.sortedFindings.find(({ key }) => key === review.openFinding) ?? null
+      : null,
+  );
 </script>
 
 {#if review.finished}
@@ -45,6 +54,9 @@
   </div>
   <SelectionBubble />
   <CommentComposer />
+  {#if openFindingEntry}
+    <FindingPopover finding={openFindingEntry.finding} key={openFindingEntry.key} />
+  {/if}
   {#if review.copyError}
     <div class="copy-error" role="alert">
       {review.copyError}
@@ -67,11 +79,11 @@
   main {
     min-width: 0;
     width: 100%;
-    padding: 20px 16px 96px;
+    padding: var(--space-5) var(--space-4) var(--space-7);
   }
 
   .tldr {
-    padding: 16px 18px 18px;
+    padding: var(--space-4) var(--space-5) var(--space-5);
     border: var(--border-w) solid var(--border);
     border-radius: var(--radius);
     background: var(--bg-raised);
@@ -82,8 +94,8 @@
     display: flex;
     align-items: baseline;
     justify-content: space-between;
-    gap: 12px;
-    margin-bottom: 10px;
+    gap: var(--space-3);
+    margin-bottom: var(--space-3);
   }
 
   .kicker {
@@ -92,21 +104,36 @@
     font-weight: 700;
     letter-spacing: 0.1em;
     text-transform: uppercase;
+    line-height: var(--lh-tight);
   }
 
   .tldr-meta {
     color: var(--fg-faint);
     font-family: var(--font-code);
-    font-size: 11px;
+    font-size: var(--fs-xs);
     font-variant-numeric: tabular-nums;
+    letter-spacing: 0;
     white-space: nowrap;
   }
 
   .tldr-body {
+    width: 100%;
+    max-width: none;
     font-size: var(--fs-md);
     font-weight: 500;
-    line-height: 1.75;
+    line-height: var(--lh-prose);
+    letter-spacing: -0.01em;
     color: var(--fg);
+  }
+
+  .tldr-body :global(p) {
+    width: 100%;
+    max-width: none;
+  }
+
+  /* Breathing room between major main-column blocks */
+  .tldr + :global(*) {
+    margin-top: var(--space-5);
   }
 
   .copy-error {

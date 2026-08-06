@@ -18,13 +18,11 @@
 
 <style>
   p {
-    margin: 6px 0;
-    /* Extra leading so inline code chips + hard shadows don't collide on wrap */
-    line-height: 1.75;
-  }
-
-  p:first-child {
-    margin-top: 0;
+    width: 100%;
+    max-width: none;
+    margin: 0 0 0.85em;
+    line-height: var(--lh-prose);
+    letter-spacing: -0.01em;
   }
 
   p:last-child {

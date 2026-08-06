@@ -65,9 +65,14 @@
     text-align: center;
   }
 
+  /* One card per file: summary + hunks share a single border/shadow */
   details {
     margin: 8px 0;
     scroll-margin-top: calc(var(--header-h) + 12px);
+    border: var(--border-w) solid var(--border);
+    background: var(--bg-raised);
+    box-shadow: var(--shadow-card);
+    overflow: hidden;
   }
 
   summary {
@@ -76,9 +81,8 @@
     gap: 10px;
     min-height: 36px;
     padding: 6px 12px;
-    border: var(--border-w) solid var(--border);
+    border: 0;
     background: var(--bg-raised);
-    box-shadow: var(--shadow-card);
     cursor: pointer;
     list-style: none;
   }
@@ -89,6 +93,10 @@
 
   summary:hover {
     background: var(--bg-hover);
+  }
+
+  details[open] summary {
+    border-bottom: var(--border-w) solid var(--border);
   }
 
   .chevron {
@@ -129,7 +137,13 @@
     font-weight: 700;
   }
 
+  .hunks {
+    background: var(--bg-code);
+  }
+
   .binary {
+    margin: 0;
+    padding: 12px;
     color: var(--fg-faint);
     font-size: var(--fs-sm);
   }

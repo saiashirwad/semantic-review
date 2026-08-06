@@ -10,39 +10,35 @@
 
 <style>
   /*
-   * Diagram field is quieter than page chrome: light surface, soft edges.
-   * Outer card keeps the hard neobrutal border; interior shouldn't shout.
-   * Nodes stay readable (near-black type); arrows keep accent orange.
+   * Diagram in a hard card — same language as summary / notes.
+   * Soft graphite edges inside; white nodes for contrast.
    */
   .diagram {
     --d-bg: #faf8f4;
     --d-fg: var(--fg);
-    /* Edges / lifelines — graphite, not pure black (less clash) */
     --d-line: #9a948a;
     --d-accent: var(--accent);
     --d-muted: var(--fg-faint);
     --d-surface: #ffffff;
-    /* Node outlines slightly softer than page --border */
     --d-border: #2a2a2a;
 
     display: flex;
     justify-content: center;
-    margin: 14px 0;
-    padding: 22px 20px;
+    margin: var(--space-4) 0 var(--space-5);
+    padding: var(--space-5) var(--space-4);
     overflow: auto;
     border: var(--border-w) solid var(--border);
     background: #faf8f4;
     box-shadow: var(--shadow-card);
   }
 
-  /* Dark mode: lift the field, keep edges muted against black chrome */
   @media (prefers-color-scheme: dark) {
     .diagram {
-      --d-bg: #141414;
+      --d-bg: var(--bg-raised);
       --d-line: #6a6a6a;
       --d-border: #c8c8c8;
       --d-surface: #1c1c1c;
-      background: #141414;
+      background: var(--bg-raised);
     }
   }
 

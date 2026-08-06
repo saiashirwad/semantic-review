@@ -2,7 +2,6 @@
   import type { PayloadFile, PayloadHunk, PayloadLine } from "../../../src/payload";
   import { getReviewState } from "../state.svelte";
   import Check from "./Check.svelte";
-  import FindingPopover from "./FindingPopover.svelte";
 
   interface Props {
     file: PayloadFile;
@@ -103,17 +102,17 @@
   {#if flags.length > 0}
     <span class="flag-anchor" data-finding-line={flags[0].key}>
       <button
+        type="button"
         class="flag"
         title={flags.map((f) => f.finding.title).join("\n")}
-        onclick={() => (review.openFinding = review.openFinding === flags[0].key ? null : flags[0].key)}
+        onclick={(e) => {
+          e.stopPropagation();
+          e.preventDefault();
+          review.openFinding = review.openFinding === flags[0].key ? null : flags[0].key;
+        }}
       >
         !
       </button>
-      {#each flags as { finding, key } (key)}
-        {#if review.openFinding === key}
-          <FindingPopover {finding} {key} />
-        {/if}
-      {/each}
     </span>
   {/if}
 {/snippet}
@@ -154,17 +153,17 @@
     {#if hunkFlags.length > 0}
       <span class="flag-anchor" data-finding-line={hunkFlags[0].key}>
         <button
+          type="button"
           class="flag wide"
           title={hunkFlags.map((f) => f.finding.title).join("\n")}
-          onclick={() => (review.openFinding = review.openFinding === hunkFlags[0].key ? null : hunkFlags[0].key)}
+          onclick={(e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            review.openFinding = review.openFinding === hunkFlags[0].key ? null : hunkFlags[0].key;
+          }}
         >
           ! {hunkFlags.length}
         </button>
-        {#each hunkFlags as { finding, key } (key)}
-          {#if review.openFinding === key}
-            <FindingPopover {finding} {key} />
-          {/if}
-        {/each}
       </span>
     {/if}
     {#if showHunkViewed}
@@ -396,9 +395,10 @@
   }
 
   /*
-   * Selection must hit nested shiki <span>s. Solid accent (no alpha) —
-   * transparent mixes silently fall back to system blue.
-   * !important beats inline token color on the selected range.
+   * Selection must hit nested shiki <span>s.
+   * Prefer a soft alpha wash when the engine supports it; fall back to the
+   * muted solid token (browsers that ignore alpha often ignore the whole rule
+   * if only transparent is set — so we set solid first, then override).
    */
   .c::selection,
   .c :global(*)::selection {
@@ -410,6 +410,23 @@
   .c :global(*)::-moz-selection {
     background: var(--selection-bg) !important;
     color: var(--selection-fg) !important;
+  }
+
+  @supports (background: color-mix(in srgb, red 50%, transparent)) {
+    .c::selection,
+    .c :global(*)::selection {
+      /* Soft wash — syntax colors stay visible underneath */
+      background: color-mix(in srgb, var(--accent) 36%, transparent) !important;
+      color: inherit !important;
+      text-shadow: 0 0 0.5px rgba(0, 0, 0, 0.45);
+    }
+
+    .c::-moz-selection,
+    .c :global(*)::-moz-selection {
+      background: color-mix(in srgb, var(--accent) 36%, transparent) !important;
+      color: inherit !important;
+      text-shadow: 0 0 0.5px rgba(0, 0, 0, 0.45);
+    }
   }
 
   .c.add {

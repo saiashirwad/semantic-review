@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { Finding } from "../../../src/analysis";
   import { getReviewState } from "../state.svelte";
+  import { startPopoverDrag } from "../popover-drag";
   import Prose from "./Prose.svelte";
 
   const { finding, key }: { finding: Finding; key: string } = $props();
@@ -16,20 +17,42 @@
     info: "Note",
   };
 
-  // Fixed to escape .hunk { overflow: hidden }. Position tracks the anchor
-  // row; if the row leaves the viewport we close instead of floating orphaned.
   let el = $state<HTMLElement | null>(null);
   let pos = $state<{ left: number; top: number; maxHeight: number } | null>(null);
+  let ready = $state(false);
+  /** After a manual drag, stop auto-repositioning / auto-closing on scroll. */
+  let userDragged = $state(false);
 
   const GAP = 10;
   const EDGE = 8;
   const WIDTH = 400;
   const MIN_CARD = 140;
 
+  /** Escape overflow:hidden on .hunk by mounting on body. */
+  function portal(node: HTMLElement) {
+    document.body.appendChild(node);
+    return {
+      destroy() {
+        node.remove();
+      },
+    };
+  }
+
   function headerOffset(): number {
     const raw = getComputedStyle(document.documentElement).getPropertyValue("--header-h").trim();
     const n = parseFloat(raw);
     return Number.isFinite(n) ? n : 48;
+  }
+
+  function anchorEl(): HTMLElement | null {
+    const all = document.querySelectorAll<HTMLElement>(`[data-finding-line="${CSS.escape(key)}"]`);
+    if (all.length === 0) return null;
+    // Prefer an on-screen anchor when the same finding is flagged in multiple DiffViews
+    for (const a of all) {
+      const r = a.getBoundingClientRect();
+      if (r.bottom > 0 && r.top < window.innerHeight) return a;
+    }
+    return all[0];
   }
 
   function rowEl(anchor: Element): HTMLElement {
@@ -40,17 +63,30 @@
     const r = row.getBoundingClientRect();
     const top = headerOffset() + EDGE;
     const bottom = window.innerHeight - EDGE;
-    // Need a meaningful slice of the row on-screen
-    return r.bottom > top + 20 && r.top < bottom - 20;
+    return r.bottom > top + 12 && r.top < bottom - 12;
   }
 
-  function place() {
-    const anchor = el?.parentElement;
-    if (!anchor || !el) return;
+  function place(opts: { closeIfOffscreen?: boolean } = {}) {
+    if (!el) return;
+    // User took over placement — leave the card where they put it
+    if (userDragged && ready) return;
+
+    const anchor = anchorEl();
+    if (!anchor) {
+      if (opts.closeIfOffscreen && !userDragged) review.openFinding = null;
+      return;
+    }
 
     const row = rowEl(anchor);
     if (!rowVisible(row)) {
-      review.openFinding = null;
+      if (opts.closeIfOffscreen && !userDragged) {
+        review.openFinding = null;
+        return;
+      }
+      if (userDragged) return;
+      // First open: bring the line on-screen, then place next frame
+      row.scrollIntoView({ behavior: "instant", block: "center" });
+      requestAnimationFrame(() => place({ closeIfOffscreen: false }));
       return;
     }
 
@@ -64,27 +100,28 @@
     const openBelow = spaceBelow >= MIN_CARD || spaceBelow >= spaceAbove;
 
     const maxHeight = Math.min(
-      openBelow ? Math.max(spaceBelow, MIN_CARD) : Math.max(spaceAbove, MIN_CARD),
+      openBelow ? Math.max(spaceBelow, 120) : Math.max(spaceAbove, 120),
       botBound - topBound,
     );
 
     el.style.width = `${width}px`;
     el.style.maxHeight = `${maxHeight}px`;
-    const height = el.offsetHeight;
+    // Force layout so offsetHeight is real (was 0 while visibility:hidden)
+    void el.offsetHeight;
+    const height = Math.min(el.scrollHeight, maxHeight) || MIN_CARD;
 
     let top: number;
     if (openBelow) {
       top = rowRect.bottom + GAP;
-      if (top + height > botBound) top = Math.max(rowRect.bottom + GAP, botBound - height);
+      if (top + height > botBound) top = Math.max(topBound, botBound - height);
     } else {
       top = rowRect.top - GAP - height;
       if (top < topBound) top = topBound;
     }
 
-    // Prefer aligning to the flag/gutter, not drifting off the right edge
     const left = Math.max(EDGE, Math.min(rowRect.left, window.innerWidth - width - EDGE));
-
     pos = { left, top, maxHeight };
+    ready = true;
   }
 
   $effect(() => {
@@ -93,26 +130,17 @@
       if (raf) return;
       raf = requestAnimationFrame(() => {
         raf = 0;
-        place();
+        place({ closeIfOffscreen: true });
       });
     };
 
-    // First paint: measure after layout. jumpToFinding may already have scrolled.
+    // Two frames: portal + bind:this settle, then measure
     requestAnimationFrame(() => {
-      // If the row is still off-screen (opened via in-hunk ! without jump), nudge once.
-      const anchor = el?.parentElement;
-      if (anchor) {
-        const row = rowEl(anchor);
-        if (!rowVisible(row)) {
-          row.scrollIntoView({ behavior: "instant", block: "center" });
-        }
-      }
-      place();
+      requestAnimationFrame(() => place({ closeIfOffscreen: false }));
     });
 
     const onScroll = (e: Event) => {
-      // Ignore scrolling inside the popover itself (overflow-y: auto)
-      if (el && e.target instanceof Node && el.contains(e.target as Node)) return;
+      if (el && e.target instanceof Node && el.contains(e.target)) return;
       schedule();
     };
 
@@ -125,6 +153,21 @@
     };
   });
 
+  function onDragStart(e: PointerEvent) {
+    if (!pos || !el) return;
+    const w = el.offsetWidth;
+    const h = el.offsetHeight;
+    startPopoverDrag(
+      e,
+      pos,
+      (p) => {
+        userDragged = true;
+        pos = { ...p, maxHeight: pos?.maxHeight ?? 400 };
+      },
+      { mode: "fixed", width: w, height: h },
+    );
+  }
+
   function onkeydown(e: KeyboardEvent) {
     if (e.key === "Escape") review.openFinding = null;
   }
@@ -132,16 +175,38 @@
 
 <svelte:window {onkeydown} />
 
+<!-- svelte-ignore a11y_no_noninteractive_element_interactions a11y_interactive_supports_focus a11y_click_events_have_key_events -->
 <div
   class="popover"
+  class:ready
   role="dialog"
   aria-label={finding.title}
+  tabindex="-1"
+  use:portal
   bind:this={el}
   style={pos
-    ? `left:${pos.left}px;top:${pos.top}px;max-height:${pos.maxHeight}px;visibility:visible`
-    : "visibility:hidden"}
+    ? `left:${pos.left}px;top:${pos.top}px;max-height:${pos.maxHeight}px`
+    : undefined}
+  onclick={(e) => e.stopPropagation()}
+  onmousedown={(e) => e.stopPropagation()}
 >
   <header class="head">
+    <button
+      type="button"
+      class="grip"
+      title="Drag to move"
+      aria-label="Drag to move"
+      onpointerdown={onDragStart}
+    >
+      <svg width="12" height="14" viewBox="0 0 12 14" aria-hidden="true">
+        <circle cx="3" cy="2" r="1.4" fill="currentColor" />
+        <circle cx="9" cy="2" r="1.4" fill="currentColor" />
+        <circle cx="3" cy="7" r="1.4" fill="currentColor" />
+        <circle cx="9" cy="7" r="1.4" fill="currentColor" />
+        <circle cx="3" cy="12" r="1.4" fill="currentColor" />
+        <circle cx="9" cy="12" r="1.4" fill="currentColor" />
+      </svg>
+    </button>
     <span class="kind sev-{finding.severity}">{KIND[finding.severity]}</span>
     <span class="ref" title={review.refForFinding(finding)}>{review.refForFinding(finding)}</span>
     <button type="button" class="close" title="Close (Esc)" onclick={() => (review.openFinding = null)}>✕</button>
@@ -179,7 +244,7 @@
 <style>
   .popover {
     position: fixed;
-    z-index: 35;
+    z-index: 50;
     width: min(400px, 85vw);
     overflow-x: hidden;
     overflow-y: auto;
@@ -192,6 +257,14 @@
     word-break: normal;
     text-align: left;
     cursor: auto;
+    /* Hidden until first successful place — avoid flash at 0,0 */
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .popover.ready {
+    opacity: 1;
+    pointer-events: auto;
   }
 
   .head {
@@ -199,12 +272,42 @@
     align-items: center;
     gap: 8px;
     min-height: 36px;
-    padding: 0 8px 0 12px;
+    padding: 0 8px 0 6px;
     border-bottom: var(--border-w) solid var(--border);
     background: var(--bg-panel);
     position: sticky;
     top: 0;
     z-index: 1;
+    user-select: none;
+  }
+
+  .grip {
+    flex-shrink: 0;
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    margin: 0;
+    padding: 0;
+    border: 2px solid transparent;
+    background: transparent;
+    color: var(--fg-faint);
+    cursor: grab;
+    touch-action: none;
+  }
+
+  .grip:hover {
+    border-color: var(--border);
+    background: var(--bg-hover);
+    color: var(--fg);
+  }
+
+  .grip:global(.dragging),
+  .grip:active {
+    cursor: grabbing;
+    border-color: var(--border);
+    background: var(--bg-hover);
+    color: var(--fg);
   }
 
   .kind {
