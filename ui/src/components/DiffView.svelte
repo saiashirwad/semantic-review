@@ -145,7 +145,12 @@
   {/if}
 {/snippet}
 
-<div class="hunk" class:embedded id="hunk-{hunk.id}">
+<div
+  class="hunk"
+  class:embedded
+  class:cursor={review.cursorHunk === hunk.id}
+  id="hunk-{hunk.id}"
+>
   <div class="head">
     {#if !embedded}
       <span class="path">{file.path}</span>
@@ -224,11 +229,20 @@
     font-family: var(--font-code);
   }
 
+  .hunk.cursor {
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
+  }
+
   .hunk.embedded {
     margin: 0;
     border: 0;
     border-top: 1px solid color-mix(in srgb, var(--fg-code) 12%, transparent);
     box-shadow: none;
+  }
+
+  .hunk.embedded.cursor {
+    outline-offset: 0;
   }
 
   .head {

@@ -65,7 +65,7 @@
 }
 
 :root {
-  color-scheme: light dark;
+  color-scheme: light;
 
   /*
    * Brand / code / severity colors must match src/palette.ts.
@@ -164,35 +164,40 @@
   --scrollbar-thumb-hover: var(--accent);
 }
 
+/* Dark tokens — shared by OS preference and explicit data-theme.
+ * Keep the three blocks (media / dark / light) byte-identical in coverage. */
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #0c0c0c;
-    --bg-raised: #161616;
-    --bg-inset: #080808;
-    --bg-hover: #222222;
-    --bg-panel: #1a1a1a;
-    --bg-code: #050505;
-    --fg: #f5f5f5;
-    --fg-muted: #b5b5b5;
-    --fg-faint: #7a7a7a;
-    --fg-code: #f5f5f5;
-    --border: #f5f5f5;
-    --border-soft: #f5f5f5;
+    color-scheme: dark;
+    /* Warm charcoal, not pitch black — borders are dim bone, shadows
+       fall dark. Gentler than the old white-on-black stencil look. */
+    --bg: #1e1c19;
+    --bg-raised: #282521;
+    --bg-inset: #161411;
+    --bg-hover: #363229;
+    --bg-panel: #2d2925;
+    --bg-code: #171512;
+    --fg: #ece8df;
+    --fg-muted: #c4beb2;
+    --fg-faint: #938d81;
+    --fg-code: #ece8df;
+    --border: #5c574d;
+    --border-soft: #423e37;
 
     --accent: #ff6a2b;
     --accent-hover: #ff8450;
-    --accent-soft: #3d1808;
+    --accent-soft: #46220f;
     --selection-bg: #a34a28;
     --selection-fg: #ffe8d6;
-    --action: #f5f5f5;
-    --action-hover: #ffffff;
-    --action-fg: #0a0a0a;
+    --action: #ece8df;
+    --action-hover: #f7f3ea;
+    --action-fg: #1c1a18;
     --selected: #34d399;
-    --selected-soft: #082016;
+    --selected-soft: #16332a;
     --selected-fg: #b8f0d4;
 
-    --add-row: #0a1812;
-    --del-row: #180e0e;
+    --add-row: #14201a;
+    --del-row: #261815;
     --add-fg: #34d399;
     --del-fg: #fb7185;
 
@@ -201,14 +206,120 @@
     --sev-minor: #f0c14a;
     --sev-info: #4dabf7;
 
-    --shadow-card: 4px 4px 0 #f5f5f5;
-    --shadow-pop: 5px 5px 0 #f5f5f5;
-    --shadow-btn: 2px 2px 0 #f5f5f5;
+    --diagram-bg: #282521;
+    --diagram-line: #5c574d;
+    --diagram-border: #a49d8f;
+
+    --shadow-card: 4px 4px 0 #0d0c0a;
+    --shadow-pop: 5px 5px 0 #0d0c0a;
+    --shadow-btn: 2px 2px 0 #0d0c0a;
 
     --scrollbar-track: var(--bg-inset);
-    --scrollbar-thumb: #7a7a7a;
+    --scrollbar-thumb: #6e685d;
     --scrollbar-thumb-hover: var(--accent);
   }
+}
+
+/* Explicit INK — beats OS light when user chose dark */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #1e1c19;
+  --bg-raised: #282521;
+  --bg-inset: #161411;
+  --bg-hover: #363229;
+  --bg-panel: #2d2925;
+  --bg-code: #171512;
+  --fg: #ece8df;
+  --fg-muted: #c4beb2;
+  --fg-faint: #938d81;
+  --fg-code: #ece8df;
+  --border: #5c574d;
+  --border-soft: #423e37;
+
+  --accent: #ff6a2b;
+  --accent-hover: #ff8450;
+  --accent-soft: #46220f;
+  --selection-bg: #a34a28;
+  --selection-fg: #ffe8d6;
+  --action: #ece8df;
+  --action-hover: #f7f3ea;
+  --action-fg: #1c1a18;
+  --selected: #34d399;
+  --selected-soft: #16332a;
+  --selected-fg: #b8f0d4;
+
+  --add-row: #14201a;
+  --del-row: #261815;
+  --add-fg: #34d399;
+  --del-fg: #fb7185;
+
+  --sev-critical: #ff5c5c;
+  --sev-major: #ff6a2b;
+  --sev-minor: #f0c14a;
+  --sev-info: #4dabf7;
+
+  --diagram-bg: #282521;
+  --diagram-line: #5c574d;
+  --diagram-border: #a49d8f;
+
+  --shadow-card: 4px 4px 0 #0d0c0a;
+  --shadow-pop: 5px 5px 0 #0d0c0a;
+  --shadow-btn: 2px 2px 0 #0d0c0a;
+
+  --scrollbar-track: var(--bg-inset);
+  --scrollbar-thumb: #6e685d;
+  --scrollbar-thumb-hover: var(--accent);
+}
+
+/* Explicit PAPER — beats OS dark when user chose light */
+:root[data-theme="light"] {
+  color-scheme: light;
+  --bg: #f3f0e8;
+  --bg-raised: #ffffff;
+  --bg-inset: #e8e2d6;
+  --bg-hover: #ddd5c6;
+  --bg-panel: #fff8ec;
+  --bg-code: #0c0c0c;
+  --fg: #0a0a0a;
+  --fg-muted: #2e2e2e;
+  --fg-faint: #5c5c5c;
+  --fg-code: #f7f1e6;
+  --border: #0a0a0a;
+  --border-soft: #0a0a0a;
+
+  --accent: #f54e00;
+  --accent-hover: #c73f00;
+  --accent-soft: #ffdcc8;
+  --selection-bg: #c45a32;
+  --selection-fg: #fff5ee;
+  --action: #0a0a0a;
+  --action-hover: #222222;
+  --action-fg: #ffffff;
+  --selected: #0f8a5f;
+  --selected-soft: #c6f0dd;
+  --selected-fg: #064032;
+
+  --add-row: #0a1812;
+  --del-row: #180e0e;
+  --add-fg: #34d399;
+  --del-fg: #fb7185;
+
+  --sev-critical: #e03131;
+  --sev-major: #f54e00;
+  --sev-minor: #c99200;
+  --sev-info: #1c7ed6;
+
+  --diagram-bg: #faf8f4;
+  --diagram-line: #9a948a;
+  --diagram-border: #2a2a2a;
+
+  --shadow-card: 4px 4px 0 #0a0a0a;
+  --shadow-pop: 5px 5px 0 #0a0a0a;
+  --shadow-btn: 2px 2px 0 #0a0a0a;
+
+  --scrollbar-track: var(--bg-inset);
+  --scrollbar-thumb: #5c5c5c;
+  --scrollbar-thumb-hover: var(--accent);
 }
 
 * {
@@ -295,8 +406,53 @@ button {
   outline-offset: 2px;
 }
 
-/* Flash when jumping from a comment / finding to a source line */
+/* ─── PRESS PHYSICS (copy into scoped component styles) ─────────
+ * Shadowed elements (--shadow-btn / --shadow-card / --shadow-pop):
+ *   transition: transform 80ms cubic-bezier(0.2, 0, 0, 1),
+ *               box-shadow 80ms cubic-bezier(0.2, 0, 0, 1);
+ *   :hover  { transform: translate(-1px, -1px);
+ *             box-shadow: <base-offset + 1px> 0 var(--border); }
+ *   :active { transform: translate(2px, 2px);
+ *             box-shadow: 0 0 0 var(--border); }
+ *   Hover shadow = base offset + 1px (2px btn → 3px 3px 0).
+ *
+ * Flat grouped buttons (chips/toggles/tabs inside a bordered group):
+ *   no hover lift; :active { transform: translate(1px, 1px); }
+ *
+ * Always wrap transforms:
+ *   @media (prefers-reduced-motion: reduce) { transform: none; }
+ * ─────────────────────────────────────────────────────────────── */
+
+/* Needle-drop when jumping to a source line: hard double blink + accent
+   left rule. Cuts between adjacent stops, no fades — mechanical. */
 @keyframes jump-flash {
+  0%,
+  42% {
+    background-color: color-mix(in srgb, var(--accent) 38%, transparent);
+    box-shadow: inset 4px 0 0 var(--accent);
+  }
+  43%,
+  55% {
+    background-color: transparent;
+    box-shadow: inset 4px 0 0 var(--accent);
+  }
+  56%,
+  78% {
+    background-color: color-mix(in srgb, var(--accent) 38%, transparent);
+    box-shadow: inset 4px 0 0 var(--accent);
+  }
+  79%,
+  100% {
+    background-color: transparent;
+    box-shadow: inset 4px 0 0 var(--accent);
+  }
+}
+
+.jump-flash {
+  animation: jump-flash 0.8s linear;
+}
+
+@keyframes jump-flash-fade {
   0% {
     background-color: color-mix(in srgb, var(--accent) 35%, transparent);
   }
@@ -305,8 +461,10 @@ button {
   }
 }
 
-.jump-flash {
-  animation: jump-flash 0.9s ease-out;
+@media (prefers-reduced-motion: reduce) {
+  .jump-flash {
+    animation: jump-flash-fade 0.9s ease-out;
+  }
 }
 
 /* Selection: muted accent wash, not OS blue or neon orange. */
@@ -340,8 +498,9 @@ button {
   margin: 0 0.1em;
   border: 1px solid var(--border);
   border-radius: 0;
-  background: var(--bg-code);
-  color: var(--fg-code);
+  /* Soft inset chip — black blocks in running prose were too loud */
+  background: var(--bg-inset);
+  color: var(--fg);
   font-family: var(--font-code);
   font-size: 0.88em;
   font-weight: 500;

@@ -54,8 +54,18 @@
 
 <style>
   section {
-    margin-top: var(--space-4);
+    margin-top: var(--space-6);
     scroll-margin-top: calc(var(--header-h) + 8px);
+  }
+
+  /* Same chapter slab as walk sections */
+  section::before {
+    content: "";
+    display: block;
+    width: 48px;
+    height: 5px;
+    margin-bottom: 12px;
+    background: var(--fg);
   }
 
   h2 {

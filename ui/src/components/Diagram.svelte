@@ -21,6 +21,7 @@
     --d-muted: var(--fg-faint);
     --d-surface: var(--bg-raised);
     --d-border: var(--diagram-border);
+    --d-grid: color-mix(in srgb, var(--d-line) 26%, transparent);
 
     display: flex;
     justify-content: center;
@@ -28,18 +29,20 @@
     padding: var(--space-3) var(--space-3);
     overflow: auto;
     border: var(--border-w) solid var(--border);
-    background: var(--diagram-bg);
+    /* Graph-paper grid — the walkthrough diagrams read as schematics */
+    background:
+      linear-gradient(var(--d-grid) 1px, transparent 1px) 0 0 / 16px 16px,
+      linear-gradient(90deg, var(--d-grid) 1px, transparent 1px) 0 0 / 16px 16px,
+      var(--diagram-bg);
     box-shadow: var(--shadow-card);
   }
 
-  @media (prefers-color-scheme: dark) {
-    .diagram {
-      --d-bg: var(--bg-raised);
-      --d-line: #6a6a6a;
-      --d-border: #c8c8c8;
-      --d-surface: #1c1c1c;
-      background: var(--bg-raised);
-    }
+  /* Theme flips come free: --diagram-* / --bg-raised are defined in all
+     three app.css theme blocks (OS media, data-theme dark, data-theme light). */
+
+  /* Optional: hard shadows on flowchart rect nodes only (not polygon/circle) */
+  .diagram :global(.node) > :global(rect) {
+    filter: drop-shadow(3px 3px 0 var(--d-border));
   }
 
   .diagram :global(svg) {
@@ -61,11 +64,11 @@
 
   /* Sequence: alt/loop frames use group fills — keep them barely-there */
   .diagram :global(.subgraph) > :global(rect:first-child) {
-    fill: color-mix(in srgb, var(--d-bg) 70%, #ffffff);
+    fill: color-mix(in srgb, var(--d-bg) 70%, var(--d-surface));
   }
 
   .diagram :global(.subgraph) > :global(rect:nth-child(2)) {
-    fill: #ffffff;
+    fill: var(--d-surface);
   }
 
   .diagram :global(.subgraph) > :global(text) {

@@ -368,9 +368,20 @@
     color: var(--fg);
   }
 
+  .step-btn:active {
+    transform: translate(1px, 1px);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .step-btn:active {
+      transform: none;
+    }
+  }
+
   .step-btn.active {
     background: var(--fg);
     color: var(--bg-raised);
+    box-shadow: inset 3px 0 0 var(--accent);
   }
 
   .step-text {

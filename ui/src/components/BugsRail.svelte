@@ -18,9 +18,6 @@
 >
   <header class="rail-head">
     <span class="rail-label">Review</span>
-    {#if review.openFindingCount > 0}
-      <span class="count-badge head-badge">{review.openFindingCount}</span>
-    {/if}
     <button
       type="button"
       class="tuck"
@@ -32,26 +29,30 @@
     </button>
   </header>
 
-  {#if review.analysis.findings.length > 0}
-    <div class="findings-box">
-      <button class="findings-head" onclick={() => (findingsOpen = !findingsOpen)}>
-        <span class="count-badge">{review.openFindingCount}</span>
-        <span class="count-label">Findings</span>
-        <span class="chevron" class:open={findingsOpen}>▸</span>
-      </button>
-      {#if findingsOpen}
-        <div class="findings-list">
-          {#each review.sortedFindings as { finding, key } (key)}
-            <FindingCard {finding} {key} />
-          {/each}
-        </div>
-      {/if}
-    </div>
-  {/if}
-  <h3>Comments</h3>
-  <CommentsList />
-  <h3>Overall</h3>
-  <OverallBox />
+  <div class="rail-scroll">
+    {#if review.analysis.findings.length > 0}
+      <div class="findings-box">
+        <button class="findings-head" onclick={() => (findingsOpen = !findingsOpen)}>
+          <span class="count-badge">{review.openFindingCount}</span>
+          <span class="count-label">Findings</span>
+          <span class="chevron" class:open={findingsOpen}>▸</span>
+        </button>
+        {#if findingsOpen}
+          <div class="findings-list">
+            {#each review.sortedFindings as { finding, key } (key)}
+              <FindingCard {finding} {key} />
+            {/each}
+          </div>
+        {/if}
+      </div>
+    {/if}
+    <h3>Comments</h3>
+    <CommentsList />
+  </div>
+  <footer class="rail-foot">
+    <h3>Overall</h3>
+    <OverallBox />
+  </footer>
 </aside>
 
 <style>
@@ -64,11 +65,26 @@
     width: 100%;
     min-width: 0;
     min-height: 0;
-    overflow-x: hidden;
-    overflow-y: auto;
+    overflow: hidden;
     padding: 0;
     background: var(--bg-raised);
     border-left: var(--border-w) solid var(--border);
+  }
+
+  /* Block flow inside — cards can never flex-shrink into each other */
+  .rail-scroll {
+    flex: 1;
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  /* Overall stays docked and visible while the list above scrolls */
+  .rail-foot {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    border-top: var(--border-w) solid var(--border);
   }
 
   /* Wide tucked: leave the grid entirely */
@@ -131,10 +147,6 @@
     text-transform: uppercase;
   }
 
-  .head-badge {
-    flex-shrink: 0;
-  }
-
   .tuck {
     flex-shrink: 0;
     display: grid;
@@ -182,6 +194,16 @@
     background: var(--bg-hover);
   }
 
+  .findings-head:active {
+    transform: translate(1px, 1px);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .findings-head:active {
+      transform: none;
+    }
+  }
+
   .count-badge {
     min-width: 20px;
     padding: 0 5px;
@@ -209,6 +231,10 @@
     transition: transform 0.1s;
   }
 
+  .findings-head:hover .chevron {
+    color: var(--accent);
+  }
+
   .chevron.open {
     transform: rotate(90deg);
   }
@@ -230,7 +256,4 @@
     line-height: var(--lh-tight);
   }
 
-  h3:first-of-type {
-    margin-top: 0;
-  }
 </style>

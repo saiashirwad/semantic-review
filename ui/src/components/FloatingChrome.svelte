@@ -98,6 +98,20 @@
   .float.ready {
     opacity: 1;
     pointer-events: auto;
+    animation: float-in 0.14s ease-out;
+  }
+
+  @keyframes float-in {
+    from {
+      transform: translateY(6px);
+      opacity: 0;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .float.ready {
+      animation: none;
+    }
   }
 
   .head {
@@ -162,15 +176,27 @@
     text-transform: uppercase;
     cursor: pointer;
     box-shadow: var(--shadow-btn);
+    transition:
+      transform 80ms cubic-bezier(0.2, 0, 0, 1),
+      box-shadow 80ms cubic-bezier(0.2, 0, 0, 1);
   }
 
   :global(.float .btn:hover:not(:disabled)) {
     background: var(--bg-hover);
+    transform: translate(-1px, -1px);
+    box-shadow: 3px 3px 0 var(--border);
   }
 
   :global(.float .btn:active:not(:disabled)) {
-    transform: translate(1px, 1px);
-    box-shadow: none;
+    transform: translate(2px, 2px);
+    box-shadow: 0 0 0 var(--border);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :global(.float .btn:hover:not(:disabled)),
+    :global(.float .btn:active:not(:disabled)) {
+      transform: none;
+    }
   }
 
   :global(.float .btn.primary),

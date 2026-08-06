@@ -414,6 +414,16 @@
     background: var(--bg-hover);
   }
 
+  .row .main:active {
+    transform: translate(1px, 1px);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .row .main:active {
+      transform: none;
+    }
+  }
+
   .row.dir {
     margin-top: 2px;
   }

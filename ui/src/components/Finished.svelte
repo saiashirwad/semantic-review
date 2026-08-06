@@ -1,13 +1,17 @@
 <script lang="ts">
   import { getReviewState } from "../state.svelte.ts";
+  import Stamp from "./Stamp.svelte";
 
   const review = getReviewState();
   const exported = $derived(review.payload.mode === "export");
+  const stampLabel = $derived(exported ? "REVIEW COPIED" : "REVIEW SENT");
 </script>
 
 <div class="finished">
   <div class="panel">
-    <div class="check">✓</div>
+    <div class="hero">
+      <Stamp label={stampLabel} color="var(--selected)" size="lg" />
+    </div>
     <h2>{exported ? "Review copied" : "Review sent"}</h2>
     <p>
       {exported
@@ -27,24 +31,41 @@
   }
 
   .panel {
-    max-width: 400px;
-    padding: 36px 32px;
+    max-width: 440px;
+    padding: 40px 32px 36px;
     border: var(--border-w) solid var(--border);
     background: var(--bg-raised);
-    box-shadow: var(--shadow-card);
+    box-shadow: var(--shadow-pop);
     text-align: center;
+    animation:
+      finish-pop 0.28s cubic-bezier(0.2, 1.4, 0.4, 1),
+      panel-shake 90ms linear 480ms;
   }
 
-  .check {
-    width: 48px;
-    height: 48px;
-    margin: 0 auto 16px;
-    border: var(--border-w) solid var(--border);
-    background: var(--selected);
-    color: #fff;
-    font-size: 22px;
-    font-weight: 700;
-    line-height: 44px;
+  @keyframes finish-pop {
+    from {
+      transform: scale(0.92) translateY(8px);
+      opacity: 0;
+    }
+  }
+
+  @keyframes panel-shake {
+    0% {
+      transform: translate(0);
+    }
+    40% {
+      transform: translate(2px, 1px);
+    }
+    100% {
+      transform: translate(0);
+    }
+  }
+
+  .hero {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 20px;
+    min-height: 72px;
   }
 
   h2 {
@@ -58,5 +79,11 @@
     color: var(--fg-muted);
     font-size: var(--fs-md);
     line-height: 1.5;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .panel {
+      animation: none;
+    }
   }
 </style>

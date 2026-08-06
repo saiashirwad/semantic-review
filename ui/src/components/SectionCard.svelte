@@ -16,7 +16,10 @@
 </script>
 
 <section id="section-{index}" data-ctx={section.heading}>
-  <h2><span class="num">{index + 1}</span>{section.heading}</h2>
+  <h2>
+    <span class="num">{String(index + 1).padStart(2, "0")}</span>
+    {section.heading}
+  </h2>
   <div class="intro"><Prose text={section.intro} /></div>
   <Diagram {svg} source={section.diagram} />
   {#each section.snippets as snippet, si (si)}
@@ -42,9 +45,19 @@
 <style>
   section {
     width: 100%;
-    margin-top: var(--space-4);
+    margin-top: var(--space-6);
     /* Sticky header offset for sidebar jump / scrollIntoView */
     scroll-margin-top: calc(var(--header-h) + var(--space-2));
+  }
+
+  /* Chapter slab — hard rule marking each walk step */
+  section::before {
+    content: "";
+    display: block;
+    width: 48px;
+    height: 5px;
+    margin-bottom: 12px;
+    background: var(--fg);
   }
 
   h2 {
@@ -60,16 +73,25 @@
 
   .num {
     flex-shrink: 0;
-    width: 24px;
-    height: 24px;
-    border: var(--border-w) solid var(--border);
-    background: var(--bg-raised);
-    color: var(--fg);
-    font-family: var(--font-code);
-    font-size: 12px;
+    min-width: 1.2em;
+    height: auto;
+    border: 0;
+    background: transparent;
+    color: transparent;
+    -webkit-text-stroke: 2px var(--fg);
+    font-family: var(--font-display);
+    font-size: 40px;
     font-weight: 700;
-    line-height: 20px;
-    text-align: center;
+    line-height: 1;
+    letter-spacing: -0.04em;
+    text-align: left;
+  }
+
+  @supports not (-webkit-text-stroke: 1px black) {
+    .num {
+      color: var(--fg);
+      -webkit-text-stroke: 0;
+    }
   }
 
   .intro {
@@ -93,11 +115,11 @@
   .intro :global(code) {
     padding: 0.08em 0.28em;
     border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
-    background: var(--bg-code);
-    color: var(--fg-code);
+    background: var(--bg-inset);
+    color: var(--fg);
     font-size: 0.86em;
     font-weight: 500;
-    box-shadow: none;
+    box-shadow: 1px 1px 0 color-mix(in srgb, var(--border) 70%, transparent);
   }
 
   /* Bridge caption between code excerpts */

@@ -3,6 +3,7 @@ import { SvelteMap, SvelteSet } from "svelte/reactivity";
 import type { Finding } from "../../src/analysis.ts";
 import type { PayloadFile, PayloadHunk, PayloadLine, ReviewPayload } from "../../src/payload.ts";
 import { formatReview, type ReviewComment, type ReviewResult } from "../../src/review.ts";
+import { countAddDel, orderedHunkIds } from "./helpers.ts";
 
 export const SEVERITY_ORDER = ["critical", "major", "minor", "info"] as const;
 
@@ -77,6 +78,16 @@ export class ReviewState {
   finished = $state(false);
   copyError = $state("");
 
+  /** Keyboard keymap overlay (?). */
+  keymapOpen = $state(false);
+  /** Keyboard-focused hunk id (j/k cursor). */
+  cursorHunk = $state<string | null>(null);
+  /** Masthead still in view — sticky header title hidden while true. */
+  mastheadVisible = $state(true);
+
+  /** Flat hunk order for keyboard navigation (files × hunks). */
+  readonly hunkOrder: string[];
+
   /** Viewport is below the Wide 3-col floor (see App.svelte / ProgressHeader). */
   narrow = $state(
     typeof window !== "undefined" ? window.matchMedia("(max-width: 1119px)").matches : false,
@@ -87,7 +98,9 @@ export class ReviewState {
    * - Diff: file checklist to mark viewed (left, XOR walk)
    * - Review: findings + comments (right)
    */
-  walkOpen = $state(false);
+  walkOpen = $state(
+    typeof window !== "undefined" ? !window.matchMedia("(max-width: 1119px)").matches : true,
+  );
   /** File checklist panel — separate from walk (not a walk step). */
   diffOpen = $state(false);
   reviewOpen = $state(
@@ -107,6 +120,7 @@ export class ReviewState {
     for (const file of payload.files) {
       for (const hunk of file.hunks) this.hunkIndex.set(hunk.id, { file, hunk });
     }
+    this.hunkOrder = orderedHunkIds(payload.files);
     if (this.narrow) {
       this.walkOpen = false;
       this.diffOpen = false;
@@ -117,6 +131,10 @@ export class ReviewState {
       const n = raw ? Number(raw) : NaN;
       if (Number.isFinite(n)) this.leftWidth = clampLeftWidth(n);
     }
+  }
+
+  get lineStats() {
+    return countAddDel(this.payload.files);
   }
 
   setLeftWidth(px: number) {
@@ -238,7 +256,7 @@ export class ReviewState {
       this.diffOpen = false;
       this.reviewOpen = false;
     } else {
-      this.walkOpen = false;
+      this.walkOpen = true;
       this.diffOpen = false;
       this.reviewOpen = true;
     }
@@ -327,6 +345,48 @@ export class ReviewState {
   toggleViewed(hunkId: string) {
     if (this.viewedHunks.has(hunkId)) this.viewedHunks.delete(hunkId);
     else this.viewedHunks.add(hunkId);
+  }
+
+  /** Move keyboard cursor to next/prev hunk and scroll it into view. */
+  async moveCursor(delta: 1 | -1) {
+    if (this.hunkOrder.length === 0) return;
+    const cur = this.cursorHunk ? this.hunkOrder.indexOf(this.cursorHunk) : -1;
+    let next: number;
+    if (cur < 0) next = delta === 1 ? 0 : this.hunkOrder.length - 1;
+    else next = (cur + delta + this.hunkOrder.length) % this.hunkOrder.length;
+    const id = this.hunkOrder[next]!;
+    this.cursorHunk = id;
+    await tick();
+    const el =
+      document.getElementById(`hunk-${id}`) ??
+      document.querySelector(`[data-hunk="${CSS.escape(id)}"]`);
+    if (!el) return;
+    const details = el.closest("details");
+    if (details) details.open = true;
+    el.scrollIntoView({ behavior: "instant", block: "center" });
+    el.classList.add("jump-flash");
+    window.setTimeout(() => el.classList.remove("jump-flash"), 900);
+  }
+
+  /** Cycle open findings with n/p. */
+  async cycleFinding(delta: 1 | -1) {
+    const open = this.sortedFindings.filter(({ key }) => this.isFindingOpen(key));
+    if (open.length === 0) return;
+    const cur = this.openFinding ? open.findIndex((e) => e.key === this.openFinding) : -1;
+    let next: number;
+    if (cur < 0) next = delta === 1 ? 0 : open.length - 1;
+    else next = (cur + delta + open.length) % open.length;
+    await this.jumpToFinding(open[next]!.key);
+  }
+
+  openComposerOnCursor() {
+    const id = this.cursorHunk;
+    if (!id) return;
+    const entry = this.hunkIndex.get(id);
+    if (!entry || entry.hunk.lines.length === 0) return;
+    this.openComposer(this.refForLine(id, 0), "", {
+      jump: { kind: "line", hunkId: id, idx: 0 },
+    });
   }
 
   fileViewed(file: PayloadFile): boolean {

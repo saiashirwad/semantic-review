@@ -10,12 +10,11 @@
   textarea {
     display: block;
     width: 100%;
-    min-height: 120px;
-    flex: 1;
+    min-height: 96px;
+    max-height: 45vh;
     padding: 10px;
     resize: vertical;
     border: 0;
-    border-top: 0;
     background: var(--bg-raised);
     box-shadow: none;
     font-size: var(--fs-sm);
@@ -24,8 +23,8 @@
   }
 
   textarea:focus {
-    outline: 2px solid var(--accent);
-    outline-offset: -2px;
+    outline: none;
+    box-shadow: inset 3px 0 0 var(--accent);
   }
 
   textarea::placeholder {

@@ -177,15 +177,38 @@
     box-shadow: var(--shadow-pop);
     white-space: nowrap;
     cursor: pointer;
+    animation: bubble-in 0.12s ease-out;
+    transition:
+      transform 80ms cubic-bezier(0.2, 0, 0, 1),
+      box-shadow 80ms cubic-bezier(0.2, 0, 0, 1);
+  }
+
+  @keyframes bubble-in {
+    from {
+      transform: translateY(4px) scale(0.96);
+      opacity: 0;
+    }
   }
 
   .bubble:hover {
     background: var(--accent-hover);
+    transform: translate(-1px, -1px);
+    box-shadow: 6px 6px 0 var(--border);
   }
 
   .bubble:active {
     transform: translate(2px, 2px);
-    box-shadow: none;
+    box-shadow: 0 0 0 var(--border);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .bubble {
+      animation: none;
+    }
+    .bubble:hover,
+    .bubble:active {
+      transform: none;
+    }
   }
 
   .plus {

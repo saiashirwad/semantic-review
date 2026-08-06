@@ -15,6 +15,9 @@
   import Finished from "./components/Finished.svelte";
   import FindingPopover from "./components/FindingPopover.svelte";
   import Prose from "./components/Prose.svelte";
+  import SeverityRuler from "./components/SeverityRuler.svelte";
+  import KeymapOverlay from "./components/KeymapOverlay.svelte";
+  import MarginNotes from "./components/MarginNotes.svelte";
 
   const { payload }: { payload: ReviewPayload } = $props();
   // The payload is embedded in the page and never changes after mount.
@@ -29,6 +32,16 @@
       ? review.sortedFindings.find(({ key }) => key === review.openFinding) ?? null
       : null,
   );
+
+  const stats = $derived(review.lineStats);
+  let booting = $state(true);
+  let mastheadEl = $state<HTMLElement | null>(null);
+
+  function isEditableTarget(t: EventTarget | null): boolean {
+    if (!(t instanceof Element)) return false;
+    if (t.closest("input, textarea, select, [contenteditable=true], [contenteditable='']")) return true;
+    return false;
+  }
 
   onMount(() => {
     // Pierre SSR core CSS (shared once). Authored for :host (shadow); payload
@@ -47,12 +60,66 @@
     sync();
     mq.addEventListener("change", sync);
 
+    const bootTimer = window.setTimeout(() => {
+      booting = false;
+    }, 700);
+
     const onKey = (e: KeyboardEvent) => {
-      if (e.key !== "Escape") return;
-      // Esc stack: composer → finding popover → drawer (composer/popover handle themselves when focused)
-      if (review.composer || review.openFinding) return;
-      if (review.drawerOpen) {
-        review.closeDrawers();
+      // Esc stack: keymap → composer/finding (self) → drawer
+      if (e.key === "Escape") {
+        if (review.keymapOpen) {
+          review.keymapOpen = false;
+          e.preventDefault();
+          return;
+        }
+        if (review.composer || review.openFinding) return;
+        if (review.drawerOpen) {
+          review.closeDrawers();
+          e.preventDefault();
+        }
+        return;
+      }
+
+      if (isEditableTarget(e.target) || review.composer) return;
+
+      if (e.key === "?") {
+        review.keymapOpen = !review.keymapOpen;
+        e.preventDefault();
+        return;
+      }
+
+      if (e.key === "j") {
+        void review.moveCursor(1);
+        e.preventDefault();
+        return;
+      }
+      if (e.key === "k") {
+        void review.moveCursor(-1);
+        e.preventDefault();
+        return;
+      }
+      if (e.key === "v") {
+        if (review.cursorHunk) review.toggleViewed(review.cursorHunk);
+        e.preventDefault();
+        return;
+      }
+      if (e.key === "n") {
+        void review.cycleFinding(1);
+        e.preventDefault();
+        return;
+      }
+      if (e.key === "p") {
+        void review.cycleFinding(-1);
+        e.preventDefault();
+        return;
+      }
+      if (e.key === "c") {
+        review.openComposerOnCursor();
+        e.preventDefault();
+        return;
+      }
+      if (e.shiftKey && (e.key === "D" || e.key === "d")) {
+        void review.done();
         e.preventDefault();
       }
     };
@@ -61,7 +128,22 @@
     return () => {
       mq.removeEventListener("change", sync);
       window.removeEventListener("keydown", onKey);
+      window.clearTimeout(bootTimer);
     };
+  });
+
+  // Masthead → sticky title handoff
+  $effect(() => {
+    const el = mastheadEl;
+    if (!el) return;
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        review.mastheadVisible = entry?.isIntersecting ?? true;
+      },
+      { rootMargin: `-${getComputedStyle(document.documentElement).getPropertyValue("--header-h") || "48px"} 0px 0px 0px`, threshold: 0 },
+    );
+    io.observe(el);
+    return () => io.disconnect();
   });
 
   // Lock page scroll while a narrow drawer is open.
@@ -78,6 +160,7 @@
 {#if review.finished}
   <Finished />
 {:else}
+  <div class="root" class:boot={booting}>
   <ProgressHeader />
   <div
     class="layout"
@@ -89,7 +172,17 @@
   >
     <Sidebar />
     <FilesRail />
-    <main>
+    <main class:has-notes={review.comments.some((c) => c.jump?.kind === "line")}>
+      <div class="masthead" bind:this={mastheadEl}>
+        <h1 class="mast-title">{payload.title}</h1>
+        <div class="double-rule" aria-hidden="true">
+          <div class="rule thick"></div>
+          <div class="rule thin"></div>
+        </div>
+        <p class="mast-stats">
+          +{stats.added} −{stats.removed} · {payload.files.length} files · {review.hunkOrder.length} hunks
+        </p>
+      </div>
       <div class="tldr" data-ctx="TL;DR">
         <div class="tldr-head">
           <span class="kicker">Summary</span>
@@ -99,11 +192,20 @@
       </div>
       <Diagram svg={review.result.diagrams.top} source={review.analysis.diagram} />
       {#each review.analysis.sections as section, i (`${review.activeResult}:${i}`)}
-        <SectionCard {section} index={i} svg={review.result.diagrams.sections[i] ?? ""} />
+        <div
+          class="section-wrap"
+          style:animation-delay="{Math.min(i, 8) * 50 + 200}ms"
+        >
+          <SectionCard {section} index={i} svg={review.result.diagrams.sections[i] ?? ""} />
+        </div>
       {/each}
       <NotesCard />
       <FullDiff />
+      <MarginNotes />
     </main>
+    {#if !review.narrow}
+      <SeverityRuler />
+    {/if}
     <BugsRail />
   </div>
   {#if review.drawerOpen}
@@ -119,38 +221,55 @@
   {#if openFindingEntry}
     <FindingPopover finding={openFindingEntry.finding} key={openFindingEntry.key} />
   {/if}
+  <KeymapOverlay />
   {#if review.copyError}
     <div class="copy-error" role="alert">
       {review.copyError}
       <button onclick={() => (review.copyError = "")}>✕</button>
     </div>
   {/if}
+  </div>
 {/if}
 
 <style>
+  /* ─── LOAD STORYBOARD ─────────────────────────────
+   *   0ms  header slides down from -100% (200ms)
+   * 120ms  summary card snaps up 12px → 0 (240ms)
+   * 160ms  card's shadow lands (box-shadow 0 → 4px 4px, 120ms)
+   * 200ms+ sections cascade, 50ms stagger (max 8 staggered, rest instant)
+   * 250ms+ review-rail cards cascade, 40ms stagger
+   * ────────────────────────────────────────────────── */
+
+  .root {
+    min-height: 100vh;
+  }
+
   .layout {
     display: grid;
-    /* Left = Walk XOR Files (resizable); center reading; right Review */
-    grid-template-columns: var(--left-rail-w, 280px) minmax(0, 1fr) minmax(280px, 340px);
+    /* Left = Walk XOR Files; center reading; 12px ruler; right Review */
+    grid-template-columns: var(--left-rail-w, 280px) minmax(0, 1fr) 12px minmax(280px, 340px);
     align-items: stretch;
     gap: 0;
     width: 100%;
     min-height: calc(100vh - var(--header-h));
   }
 
-  /* Wide: tuck left and/or right — main expands */
+  /* Wide: tuck left and/or right — main expands; keep ruler column */
   .layout.no-left:not(.narrow) {
-    grid-template-columns: minmax(0, 1fr) minmax(280px, 340px);
+    grid-template-columns: minmax(0, 1fr) 12px minmax(280px, 340px);
   }
   .layout.no-review:not(.narrow) {
-    grid-template-columns: var(--left-rail-w, 280px) minmax(0, 1fr);
+    grid-template-columns: var(--left-rail-w, 280px) minmax(0, 1fr) 12px;
   }
-  .layout.no-left.no-review:not(.narrow),
+  .layout.no-left.no-review:not(.narrow) {
+    grid-template-columns: minmax(0, 1fr) 12px;
+  }
   .layout.narrow {
     grid-template-columns: minmax(0, 1fr);
   }
 
   main {
+    position: relative;
     min-width: 0;
     width: 100%;
     min-height: calc(100vh - var(--header-h));
@@ -158,12 +277,65 @@
     background: var(--bg);
   }
 
+  /* Reserve the margin-note gutter only when notes exist — an empty
+     reservation wastes ~200px of reading width on laptop screens. */
+  @media (min-width: 1600px) {
+    main.has-notes {
+      padding-right: calc(var(--space-3) + 180px + 12px);
+    }
+  }
+
+  .masthead {
+    margin-bottom: var(--space-4);
+  }
+
+  .mast-title {
+    margin: 0 0 10px;
+    font-size: 34px;
+    font-weight: 700;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+  }
+
+  .double-rule {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    margin-bottom: 8px;
+  }
+
+  .rule {
+    height: 0;
+    border: 0;
+    border-bottom-style: solid;
+    border-bottom-color: var(--border);
+  }
+
+  .rule.thick {
+    border-bottom-width: 4px;
+  }
+
+  .rule.thin {
+    border-bottom-width: 2px;
+  }
+
+  .mast-stats {
+    margin: 0;
+    color: var(--fg-muted);
+    font-family: var(--font-code);
+    font-size: var(--fs-sm);
+    font-variant-numeric: tabular-nums;
+  }
+
   .tldr {
-    padding: var(--space-3) var(--space-4);
+    padding: calc(var(--space-3) + 4px) var(--space-4) var(--space-3);
     border: var(--border-w) solid var(--border);
     border-radius: var(--radius);
     background: var(--bg-raised);
-    box-shadow: var(--shadow-card);
+    /* Accent top bar — the page's single entry point */
+    box-shadow:
+      inset 0 4px 0 var(--accent),
+      var(--shadow-card);
   }
 
   .tldr-head {
@@ -210,6 +382,114 @@
   /* Tight stack between main-column blocks */
   .tldr + :global(*) {
     margin-top: var(--space-3);
+  }
+
+  .section-wrap {
+    animation-fill-mode: both;
+  }
+
+  /* Boot entrance — one-shot .boot on root so backend tab re-keys do not replay */
+  .root.boot :global(header.progress-header) {
+    animation: boot-header 200ms cubic-bezier(0.2, 0.9, 0.25, 1) both;
+  }
+
+  .root.boot .tldr {
+    animation:
+      boot-card 240ms cubic-bezier(0.2, 0.9, 0.25, 1) 120ms both,
+      boot-shadow 120ms cubic-bezier(0.2, 0.9, 0.25, 1) 160ms both;
+  }
+
+  .root.boot .section-wrap {
+    animation: boot-section 240ms cubic-bezier(0.2, 0.9, 0.25, 1) both;
+  }
+
+  .root.boot :global(#review-panel .card) {
+    animation: boot-rail 200ms cubic-bezier(0.2, 0.9, 0.25, 1) both;
+  }
+
+  .root.boot :global(#review-panel .findings-list .card:nth-child(1)) {
+    animation-delay: 250ms;
+  }
+  .root.boot :global(#review-panel .findings-list .card:nth-child(2)) {
+    animation-delay: 290ms;
+  }
+  .root.boot :global(#review-panel .findings-list .card:nth-child(3)) {
+    animation-delay: 330ms;
+  }
+  .root.boot :global(#review-panel .findings-list .card:nth-child(4)) {
+    animation-delay: 370ms;
+  }
+  .root.boot :global(#review-panel .findings-list .card:nth-child(5)) {
+    animation-delay: 410ms;
+  }
+  .root.boot :global(#review-panel .findings-list .card:nth-child(6)) {
+    animation-delay: 450ms;
+  }
+  .root.boot :global(#review-panel .findings-list .card:nth-child(7)) {
+    animation-delay: 490ms;
+  }
+  .root.boot :global(#review-panel .findings-list .card:nth-child(8)) {
+    animation-delay: 530ms;
+  }
+
+  @keyframes boot-header {
+    from {
+      transform: translateY(-100%);
+    }
+    to {
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes boot-card {
+    from {
+      transform: translateY(12px);
+    }
+    to {
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes boot-shadow {
+    from {
+      box-shadow:
+        inset 0 4px 0 var(--accent),
+        0 0 0 var(--border);
+    }
+    to {
+      box-shadow:
+        inset 0 4px 0 var(--accent),
+        var(--shadow-card);
+    }
+  }
+
+  @keyframes boot-section {
+    from {
+      transform: translateY(12px);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  @keyframes boot-rail {
+    from {
+      transform: translateY(8px);
+    }
+    to {
+      transform: translateY(0);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .root.boot :global(header.progress-header),
+    .root.boot .tldr,
+    .root.boot .section-wrap,
+    .root.boot :global(#review-panel .card) {
+      animation: none;
+    }
   }
 
   /* Below sticky header so Walk / Review / Done stay usable while a drawer is open */
