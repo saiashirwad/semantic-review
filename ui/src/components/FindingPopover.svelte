@@ -2,6 +2,15 @@
   import type { Finding } from "../../../src/analysis";
   import { getReviewState } from "../state.svelte";
   import { startPopoverDrag } from "../popover-drag";
+  import {
+    computePopoverPos,
+    headerOffsetPx,
+    pickVisibleAnchor,
+    rowVisible,
+    POPOVER_EDGE,
+  } from "../popover-place";
+  import CodeQuote from "./CodeQuote.svelte";
+  import DragGrip from "./DragGrip.svelte";
   import Prose from "./Prose.svelte";
 
   const { finding, key }: { finding: Finding; key: string } = $props();
@@ -9,6 +18,7 @@
 
   const quote = $derived(review.quoteForFinding(finding));
   const quoteHtml = $derived(review.quoteHtmlForFinding(finding));
+  const ref = $derived(review.refForFinding(finding));
 
   const KIND: Record<Finding["severity"], string> = {
     critical: "Critical",
@@ -23,11 +33,6 @@
   /** After a manual drag, stop auto-repositioning / auto-closing on scroll. */
   let userDragged = $state(false);
 
-  const GAP = 10;
-  const EDGE = 8;
-  const WIDTH = 400;
-  const MIN_CARD = 140;
-
   /** Escape overflow:hidden on .hunk by mounting on body. */
   function portal(node: HTMLElement) {
     document.body.appendChild(node);
@@ -38,37 +43,19 @@
     };
   }
 
-  function headerOffset(): number {
-    const raw = getComputedStyle(document.documentElement).getPropertyValue("--header-h").trim();
-    const n = parseFloat(raw);
-    return Number.isFinite(n) ? n : 48;
-  }
-
   function anchorEl(): HTMLElement | null {
-    const all = document.querySelectorAll<HTMLElement>(`[data-finding-line="${CSS.escape(key)}"]`);
-    if (all.length === 0) return null;
-    // Prefer an on-screen anchor when the same finding is flagged in multiple DiffViews
-    for (const a of all) {
-      const r = a.getBoundingClientRect();
-      if (r.bottom > 0 && r.top < window.innerHeight) return a;
-    }
-    return all[0];
+    return pickVisibleAnchor(
+      document.querySelectorAll<HTMLElement>(`[data-finding-line="${CSS.escape(key)}"]`),
+      window.innerHeight,
+    );
   }
 
   function rowEl(anchor: Element): HTMLElement {
     return (anchor.closest("tr") as HTMLElement | null) ?? (anchor as HTMLElement);
   }
 
-  function rowVisible(row: HTMLElement): boolean {
-    const r = row.getBoundingClientRect();
-    const top = headerOffset() + EDGE;
-    const bottom = window.innerHeight - EDGE;
-    return r.bottom > top + 12 && r.top < bottom - 12;
-  }
-
   function place(opts: { closeIfOffscreen?: boolean } = {}) {
     if (!el) return;
-    // User took over placement — leave the card where they put it
     if (userDragged && ready) return;
 
     const anchor = anchorEl();
@@ -78,7 +65,10 @@
     }
 
     const row = rowEl(anchor);
-    if (!rowVisible(row)) {
+    const rowRect = row.getBoundingClientRect();
+    const headerH = headerOffsetPx();
+
+    if (!rowVisible(rowRect, headerH, window.innerHeight)) {
       if (opts.closeIfOffscreen && !userDragged) {
         review.openFinding = null;
         return;
@@ -90,37 +80,22 @@
       return;
     }
 
-    const rowRect = row.getBoundingClientRect();
-    const width = Math.min(WIDTH, window.innerWidth - EDGE * 2);
-    const topBound = headerOffset() + EDGE;
-    const botBound = window.innerHeight - EDGE;
-
-    const spaceBelow = botBound - rowRect.bottom - GAP;
-    const spaceAbove = rowRect.top - topBound - GAP;
-    const openBelow = spaceBelow >= MIN_CARD || spaceBelow >= spaceAbove;
-
-    const maxHeight = Math.min(
-      openBelow ? Math.max(spaceBelow, 120) : Math.max(spaceAbove, 120),
-      botBound - topBound,
-    );
-
-    el.style.width = `${width}px`;
-    el.style.maxHeight = `${maxHeight}px`;
-    // Force layout so offsetHeight is real (was 0 while visibility:hidden)
+    // Measure with a provisional max-height so scrollHeight is meaningful
+    el.style.width = `${Math.min(400, window.innerWidth - POPOVER_EDGE * 2)}px`;
+    el.style.maxHeight = `${window.innerHeight - headerH - POPOVER_EDGE * 2}px`;
     void el.offsetHeight;
-    const height = Math.min(el.scrollHeight, maxHeight) || MIN_CARD;
 
-    let top: number;
-    if (openBelow) {
-      top = rowRect.bottom + GAP;
-      if (top + height > botBound) top = Math.max(topBound, botBound - height);
-    } else {
-      top = rowRect.top - GAP - height;
-      if (top < topBound) top = topBound;
-    }
+    const placed = computePopoverPos({
+      rowRect,
+      contentHeight: el.scrollHeight,
+      viewportW: window.innerWidth,
+      viewportH: window.innerHeight,
+      headerH,
+    });
 
-    const left = Math.max(EDGE, Math.min(rowRect.left, window.innerWidth - width - EDGE));
-    pos = { left, top, maxHeight };
+    el.style.width = `${placed.width}px`;
+    el.style.maxHeight = `${placed.maxHeight}px`;
+    pos = { left: placed.left, top: placed.top, maxHeight: placed.maxHeight };
     ready = true;
   }
 
@@ -175,7 +150,10 @@
 
 <svelte:window {onkeydown} />
 
-<!-- svelte-ignore a11y_no_noninteractive_element_interactions a11y_interactive_supports_focus a11y_click_events_have_key_events -->
+<!-- Stop outside handlers from treating popover clicks as dismissals. -->
+<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+<!-- svelte-ignore a11y_interactive_supports_focus -->
+<!-- svelte-ignore a11y_click_events_have_key_events -->
 <div
   class="popover"
   class:ready
@@ -191,24 +169,9 @@
   onmousedown={(e) => e.stopPropagation()}
 >
   <header class="head">
-    <button
-      type="button"
-      class="grip"
-      title="Drag to move"
-      aria-label="Drag to move"
-      onpointerdown={onDragStart}
-    >
-      <svg width="12" height="14" viewBox="0 0 12 14" aria-hidden="true">
-        <circle cx="3" cy="2" r="1.4" fill="currentColor" />
-        <circle cx="9" cy="2" r="1.4" fill="currentColor" />
-        <circle cx="3" cy="7" r="1.4" fill="currentColor" />
-        <circle cx="9" cy="7" r="1.4" fill="currentColor" />
-        <circle cx="3" cy="12" r="1.4" fill="currentColor" />
-        <circle cx="9" cy="12" r="1.4" fill="currentColor" />
-      </svg>
-    </button>
+    <DragGrip onpointerdown={onDragStart} />
     <span class="kind sev-{finding.severity}">{KIND[finding.severity]}</span>
-    <span class="ref" title={review.refForFinding(finding)}>{review.refForFinding(finding)}</span>
+    <span class="ref" title={ref}>{ref}</span>
     <button type="button" class="close" title="Close (Esc)" onclick={() => (review.openFinding = null)}>✕</button>
   </header>
 
@@ -216,16 +179,7 @@
     <h4>{finding.title}</h4>
     <div class="prose"><Prose text={finding.body} /></div>
 
-    {#if quoteHtml || quote}
-      <div class="quote-frame">
-        <div class="quote-bar" aria-hidden="true"></div>
-        {#if quoteHtml}
-          <blockquote class="quote">{@html quoteHtml}</blockquote>
-        {:else}
-          <blockquote class="quote plain">{quote.trim()}</blockquote>
-        {/if}
-      </div>
-    {/if}
+    <CodeQuote html={quoteHtml || undefined} quote={quote} maxHeight="72px" />
 
     {#if finding.recommendation.trim()}
       <div class="rec-label">Recommendation</div>
@@ -279,35 +233,6 @@
     top: 0;
     z-index: 1;
     user-select: none;
-  }
-
-  .grip {
-    flex-shrink: 0;
-    display: grid;
-    place-items: center;
-    width: 28px;
-    height: 28px;
-    margin: 0;
-    padding: 0;
-    border: 2px solid transparent;
-    background: transparent;
-    color: var(--fg-faint);
-    cursor: grab;
-    touch-action: none;
-  }
-
-  .grip:hover {
-    border-color: var(--border);
-    background: var(--bg-hover);
-    color: var(--fg);
-  }
-
-  .grip:global(.dragging),
-  .grip:active {
-    cursor: grabbing;
-    border-color: var(--border);
-    background: var(--bg-hover);
-    color: var(--fg);
   }
 
   .kind {
@@ -376,6 +301,10 @@
     padding: 12px 14px 14px;
   }
 
+  .body :global(.quote-frame) {
+    margin-top: 10px;
+  }
+
   h4 {
     margin: 0 0 8px;
     color: var(--fg);
@@ -397,48 +326,6 @@
     color: var(--fg-muted);
     font-size: var(--fs-sm);
     line-height: 1.45;
-  }
-
-  .quote-frame {
-    display: flex;
-    margin: 10px 0 0;
-    overflow: hidden;
-    border: var(--border-w) solid var(--border);
-    background: var(--bg-code);
-    box-shadow: 2px 2px 0 var(--border);
-  }
-
-  .quote-bar {
-    flex-shrink: 0;
-    width: 3px;
-    background: var(--accent);
-  }
-
-  .quote {
-    flex: 1;
-    min-width: 0;
-    margin: 0;
-    padding: 8px 10px;
-    overflow: auto;
-    max-height: 72px;
-    border: 0;
-    background: transparent;
-    color: var(--fg-code);
-    font-family: var(--font-code);
-    font-size: 11px;
-    line-height: 1.5;
-    white-space: pre;
-    word-break: normal;
-    overflow-wrap: normal;
-  }
-
-  .quote :global(span[style]) {
-    background: transparent !important;
-  }
-
-  .quote.plain {
-    white-space: pre-wrap;
-    word-break: break-word;
   }
 
   .actions {

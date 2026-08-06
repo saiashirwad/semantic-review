@@ -1,6 +1,8 @@
 <script lang="ts">
   import { getReviewState } from "../state.svelte";
   import { startPopoverDrag, type Point } from "../popover-drag";
+  import CodeQuote from "./CodeQuote.svelte";
+  import DragGrip from "./DragGrip.svelte";
 
   const review = getReviewState();
 
@@ -37,7 +39,6 @@
   });
 
   const pos = $derived(dragPos ?? basePos);
-
   const style = $derived(`left: ${pos.left}px; top: ${pos.top}px;`);
 
   $effect(() => {
@@ -76,22 +77,7 @@
 {#if review.composer}
   <div class="composer" {style} bind:this={boxEl} role="dialog" aria-label="Add comment">
     <header class="head">
-      <button
-        type="button"
-        class="grip"
-        title="Drag to move"
-        aria-label="Drag to move"
-        onpointerdown={onDragStart}
-      >
-        <svg width="12" height="14" viewBox="0 0 12 14" aria-hidden="true">
-          <circle cx="3" cy="2" r="1.4" fill="currentColor" />
-          <circle cx="9" cy="2" r="1.4" fill="currentColor" />
-          <circle cx="3" cy="7" r="1.4" fill="currentColor" />
-          <circle cx="9" cy="7" r="1.4" fill="currentColor" />
-          <circle cx="3" cy="12" r="1.4" fill="currentColor" />
-          <circle cx="9" cy="12" r="1.4" fill="currentColor" />
-        </svg>
-      </button>
+      <DragGrip onpointerdown={onDragStart} />
       <span class="kicker">Comment</span>
       <button type="button" class="close" title="Close (Esc)" onclick={() => (review.composer = null)}>
         ✕
@@ -108,20 +94,7 @@
         {/if}
       </div>
 
-      {#if review.composer.html || review.composer.quote}
-        <div class="quote-frame">
-          <div class="quote-bar" aria-hidden="true"></div>
-          {#if review.composer.html}
-            <blockquote class="quote">
-              {#each review.composer.html.split("\n") as lineHtml}
-                <span class="qline">{@html lineHtml || "&nbsp;"}</span>
-              {/each}
-            </blockquote>
-          {:else}
-            <blockquote class="quote plain">{review.composer.quote}</blockquote>
-          {/if}
-        </div>
-      {/if}
+      <CodeQuote html={review.composer.html} quote={review.composer.quote} maxHeight="120px" />
 
       <label class="field">
         <span class="field-label">Your note</span>
@@ -168,35 +141,6 @@
     background: var(--bg-panel);
     color: var(--fg);
     user-select: none;
-  }
-
-  .grip {
-    flex-shrink: 0;
-    display: grid;
-    place-items: center;
-    width: 28px;
-    height: 28px;
-    margin: 0;
-    padding: 0;
-    border: 2px solid transparent;
-    background: transparent;
-    color: var(--fg-faint);
-    cursor: grab;
-    touch-action: none;
-  }
-
-  .grip:hover {
-    border-color: var(--border);
-    background: var(--bg-hover);
-    color: var(--fg);
-  }
-
-  .grip:global(.dragging),
-  .grip:active {
-    cursor: grabbing;
-    border-color: var(--border);
-    background: var(--bg-hover);
-    color: var(--fg);
   }
 
   .kicker {
@@ -267,53 +211,6 @@
     font-weight: 700;
     font-variant-numeric: tabular-nums;
     box-shadow: 2px 2px 0 var(--border);
-  }
-
-  .quote-frame {
-    display: flex;
-    overflow: hidden;
-    border: var(--border-w) solid var(--border);
-    background: var(--bg-code);
-    box-shadow: 3px 3px 0 var(--border);
-  }
-
-  .quote-bar {
-    flex-shrink: 0;
-    width: 4px;
-    background: var(--accent);
-  }
-
-  .quote {
-    flex: 1;
-    min-width: 0;
-    margin: 0;
-    padding: 10px 12px;
-    overflow: auto;
-    max-height: 120px;
-    border: 0;
-    background: transparent;
-    color: var(--fg-code);
-    font-family: var(--font-code);
-    font-size: 12px;
-    line-height: 1.55;
-    white-space: pre;
-    word-break: normal;
-    overflow-wrap: normal;
-  }
-
-  .quote :global(span[style]) {
-    background: transparent !important;
-  }
-
-  .qline {
-    display: block;
-    min-height: 1.55em;
-    white-space: pre;
-  }
-
-  .quote.plain {
-    white-space: pre-wrap;
-    word-break: break-word;
   }
 
   .field {

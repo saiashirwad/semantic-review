@@ -3,6 +3,7 @@
   import type { PayloadFile } from "../../../src/payload";
   import { getReviewState } from "../state.svelte";
   import Check from "./Check.svelte";
+  import FilePath from "./FilePath.svelte";
 
   const review = getReviewState();
 
@@ -24,14 +25,8 @@
   const fileCount = $derived(review.payload.files.length);
   const viewedCount = $derived(review.viewedFileCount);
 
-  function basename(path: string): string {
-    const i = path.lastIndexOf("/");
-    return i >= 0 ? path.slice(i + 1) : path;
-  }
-
-  function dirname(path: string): string {
-    const i = path.lastIndexOf("/");
-    return i > 0 ? path.slice(0, i) : "";
+  function sectionHunkIds(sectionIndex: number): Set<string> {
+    return new Set(review.analysis.sections[sectionIndex]?.snippets.map((s) => s.hunk_id) ?? []);
   }
 
   function jump(id: string) {
@@ -49,34 +44,13 @@
     (details ?? document.getElementById(fullDiffId))?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
-  function sectionHunkIds(sectionIndex: number): Set<string> {
-    return new Set(review.analysis.sections[sectionIndex]?.snippets.map((s) => s.hunk_id) ?? []);
-  }
-
-  function openFindingsFor(sectionIndex: number, path: string) {
-    const hunks = sectionHunkIds(sectionIndex);
-    const hit = review.sortedFindings.find(({ finding, key }) => {
-      if (review.resolvedFindings.has(key) || review.sentFindings.has(key)) return false;
-      if (!hunks.has(finding.hunk_id)) return false;
-      return review.hunkIndex.get(finding.hunk_id)?.file.path === path;
-    });
+  function jumpFirstFinding(sectionIndex: number, path: string) {
+    const hit = review.openFindingsFor(path, sectionHunkIds(sectionIndex))[0];
     if (hit) void review.jumpToFinding(hit.key);
   }
 
-  function findingCount(sectionIndex: number, path: string): number {
-    const hunks = sectionHunkIds(sectionIndex);
-    return review.sortedFindings.filter(({ finding, key }) => {
-      if (review.resolvedFindings.has(key) || review.sentFindings.has(key)) return false;
-      if (!hunks.has(finding.hunk_id)) return false;
-      return review.hunkIndex.get(finding.hunk_id)?.file.path === path;
-    }).length;
-  }
-
   onMount(() => {
-    const ids = [
-      ...review.analysis.sections.map((_, i) => `section-${i}`),
-      fullDiffId,
-    ];
+    const ids = [...review.analysis.sections.map((_, i) => `section-${i}`), fullDiffId];
     const elements = ids.map((id) => document.getElementById(id)).filter((el): el is HTMLElement => !!el);
     if (elements.length === 0) return;
 
@@ -123,23 +97,18 @@
           <span class="step-text">{section.heading}</span>
         </button>
         {#if sectionFiles[i].length > 0}
+          {@const hunks = sectionHunkIds(i)}
           <ul class="meta">
             {#each sectionFiles[i] as path}
-              {@const n = findingCount(i, path)}
+              {@const n = review.openFindingsFor(path, hunks).length}
               <li>
-                <!-- Basename first (never truncated); dir is secondary and may ellipsize -->
-                <span class="file-meta" title={path}>
-                  <span class="base">{basename(path)}</span>
-                  {#if dirname(path)}
-                    <span class="dir">{dirname(path)}</span>
-                  {/if}
-                </span>
+                <FilePath {path} class="meta-path" />
                 {#if n > 0}
                   <button
                     type="button"
                     class="badge"
                     title="{n} open finding{n === 1 ? '' : 's'} — jump to first"
-                    onclick={() => openFindingsFor(i, path)}
+                    onclick={() => jumpFirstFinding(i, path)}
                   >
                     {n}
                   </button>
@@ -174,12 +143,7 @@
               onchange={() => review.setFileViewed(file, !viewed)}
             />
             <button type="button" class="file-jump" title={file.path} onclick={() => jumpToFile(file)}>
-              <span class="file-name">
-                <span class="base">{basename(file.path)}</span>
-                {#if dirname(file.path)}
-                  <span class="dir">{dirname(file.path)}</span>
-                {/if}
-              </span>
+              <FilePath path={file.path} class="list-path" />
               <span class="counts">
                 <b class="add">+{file.adds}</b>
                 <b class="del">−{file.dels}</b>
@@ -340,31 +304,9 @@
     padding: 1px 0;
   }
 
-  .file-meta {
+  .meta :global(.meta-path) {
     flex: 1;
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 0;
-    font-family: var(--font-code);
     font-size: 11px;
-    line-height: 1.25;
-  }
-
-  .file-meta .base {
-    color: var(--fg-muted);
-    font-weight: 600;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .file-meta .dir {
-    color: color-mix(in srgb, var(--fg-faint) 75%, transparent);
-    font-size: 10px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
   }
 
   .badge {
@@ -433,41 +375,27 @@
     background: var(--bg-hover);
   }
 
-  /* Stack name over dir so the full basename always fits */
-  .file-name {
+  .file-jump :global(.list-path) {
     flex: 1;
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
     gap: 1px;
-    font-family: var(--font-code);
-    line-height: 1.25;
   }
 
-  .file-name .base {
+  .file-jump :global(.list-path .base) {
     color: var(--fg);
     font-size: 12px;
-    font-weight: 600;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
   }
 
-  .file-name .dir {
+  .file-jump :global(.list-path .dir) {
     color: var(--fg-faint);
-    font-size: 10px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
   }
 
-  .check-row.viewed .base {
+  .check-row.viewed :global(.list-path .base) {
     color: var(--fg-faint);
     text-decoration: line-through;
     text-decoration-thickness: 1px;
   }
 
-  .check-row.viewed .dir {
+  .check-row.viewed :global(.list-path .dir) {
     color: color-mix(in srgb, var(--fg-faint) 55%, transparent);
   }
 

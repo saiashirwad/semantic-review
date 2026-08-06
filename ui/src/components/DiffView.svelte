@@ -94,6 +94,12 @@
     });
   }
 
+  function toggleFinding(key: string, e: MouseEvent) {
+    e.stopPropagation();
+    e.preventDefault();
+    review.openFinding = review.openFinding === key ? null : key;
+  }
+
   const hunkFlags = $derived(review.findingsAt(hunk.id, null).filter(({ key }) => !review.resolvedFindings.has(key)));
 </script>
 
@@ -105,11 +111,7 @@
         type="button"
         class="flag"
         title={flags.map((f) => f.finding.title).join("\n")}
-        onclick={(e) => {
-          e.stopPropagation();
-          e.preventDefault();
-          review.openFinding = review.openFinding === flags[0].key ? null : flags[0].key;
-        }}
+        onclick={(e) => toggleFinding(flags[0].key, e)}
       >
         !
       </button>
@@ -156,11 +158,7 @@
           type="button"
           class="flag wide"
           title={hunkFlags.map((f) => f.finding.title).join("\n")}
-          onclick={(e) => {
-            e.stopPropagation();
-            e.preventDefault();
-            review.openFinding = review.openFinding === hunkFlags[0].key ? null : hunkFlags[0].key;
-          }}
+          onclick={(e) => toggleFinding(hunkFlags[0].key, e)}
         >
           ! {hunkFlags.length}
         </button>

@@ -1,5 +1,6 @@
 <script lang="ts">
   import { getReviewState } from "../state.svelte";
+  import CodeQuote from "./CodeQuote.svelte";
 
   const review = getReviewState();
 </script>
@@ -21,18 +22,9 @@
         </button>
       </header>
 
-      {#if review.commentHtml[i] || comment.quote}
-        <div class="quote-frame">
-          <div class="quote-bar" aria-hidden="true"></div>
-          {#if review.commentHtml[i]}
-            <blockquote class="quote">
-              {#each review.commentHtml[i]!.split("\n") as lineHtml}
-                <span class="qline">{@html lineHtml || "&nbsp;"}</span>
-              {/each}
-            </blockquote>
-          {:else}
-            <blockquote class="quote plain">{comment.quote}</blockquote>
-          {/if}
+      {#if comment.html || comment.quote}
+        <div class="quote-wrap">
+          <CodeQuote html={comment.html} quote={comment.quote} maxHeight="96px" />
         </div>
       {/if}
 
@@ -136,52 +128,8 @@
     color: var(--fg);
   }
 
-  .quote-frame {
-    display: flex;
+  .quote-wrap {
     margin: 10px 12px 0;
-    overflow: hidden;
-    border: var(--border-w) solid var(--border);
-    background: var(--bg-code);
-    box-shadow: 2px 2px 0 var(--border);
-  }
-
-  .quote-bar {
-    flex-shrink: 0;
-    width: 3px;
-    background: var(--accent);
-  }
-
-  .quote {
-    flex: 1;
-    min-width: 0;
-    margin: 0;
-    padding: 8px 10px;
-    overflow: auto;
-    max-height: 96px;
-    border: 0;
-    background: transparent;
-    color: var(--fg-code);
-    font-family: var(--font-code);
-    font-size: 11px;
-    line-height: 1.5;
-    white-space: pre;
-    word-break: normal;
-    overflow-wrap: normal;
-  }
-
-  .quote :global(span[style]) {
-    background: transparent !important;
-  }
-
-  .qline {
-    display: block;
-    min-height: 1.5em;
-    white-space: pre;
-  }
-
-  .quote.plain {
-    white-space: pre-wrap;
-    word-break: break-word;
   }
 
   .text {

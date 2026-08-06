@@ -13,10 +13,15 @@ export interface PendingComment {
   anchor?: { left: number; top: number }; // document coords near the source line
 }
 
+/** Client comment: ReviewComment plus optional display HTML (never POSTed). */
+export type UiComment = ReviewComment & { html?: string };
+
 export interface HunkRef {
   file: PayloadFile;
   hunk: PayloadHunk;
 }
+
+export type FindingEntry = { finding: Finding; key: string };
 
 export class ReviewState {
   payload: ReviewPayload;
@@ -27,10 +32,7 @@ export class ReviewState {
   viewedHunks = new SvelteSet<string>();
   resolvedFindings = new SvelteSet<string>(); // keys `${resultIdx}:${findingIdx}`
   sentFindings = new SvelteSet<string>();
-  comments = $state<ReviewComment[]>([]);
-  // Client-side only: shiki HTML for each comment's quote, parallel to
-  // `comments`. Never serialized into the ReviewResult.
-  commentHtml = $state<(string | undefined)[]>([]);
+  comments = $state<UiComment[]>([]);
   overall = $state("");
   includeNotes = new SvelteSet<number>(); // result indices
   openFinding = $state<string | null>(null);
@@ -75,15 +77,22 @@ export class ReviewState {
   }
 
   // Findings of the active result, sorted by severity, with stable keys.
-  get sortedFindings() {
+  get sortedFindings(): FindingEntry[] {
     return this.analysis.findings
-      .map((finding, index) => ({ finding, key: `${this.activeResult}:${index}` }))
+      .map((finding, index) => ({ finding, key: this.findingKey(index) }))
       .sort((a, b) => SEVERITY_ORDER.indexOf(a.finding.severity) - SEVERITY_ORDER.indexOf(b.finding.severity));
   }
 
   get openFindingCount() {
-    return this.sortedFindings.filter(({ key }) => !this.resolvedFindings.has(key) && !this.sentFindings.has(key))
-      .length;
+    return this.sortedFindings.filter(({ key }) => this.isFindingOpen(key)).length;
+  }
+
+  findingKey(index: number): string {
+    return `${this.activeResult}:${index}`;
+  }
+
+  isFindingOpen(key: string): boolean {
+    return !this.resolvedFindings.has(key) && !this.sentFindings.has(key);
   }
 
   toggleViewed(hunkId: string) {
@@ -103,12 +112,12 @@ export class ReviewState {
   }
 
   // Findings of the active result anchored to a given hunk line (or the whole
-  // hunk when lineIdx is null), as [key, finding] pairs.
-  findingsAt(hunkId: string, lineIdx: number | null): { finding: Finding; key: string }[] {
+  // hunk when lineIdx is null).
+  findingsAt(hunkId: string, lineIdx: number | null): FindingEntry[] {
     const entry = this.hunkIndex.get(hunkId);
     if (!entry) return [];
     return this.analysis.findings
-      .map((finding, index) => ({ finding, key: `${this.activeResult}:${index}` }))
+      .map((finding, index) => ({ finding, key: this.findingKey(index) }))
       .filter(({ finding }) => {
         if (finding.hunk_id !== hunkId) return false;
         if (lineIdx == null) return finding.line == null;
@@ -116,6 +125,15 @@ export class ReviewState {
         const line = entry.hunk.lines[lineIdx];
         return finding.line < 0 ? line.oldNo === -finding.line : line.newNo === finding.line;
       });
+  }
+
+  /** Open findings whose hunk belongs to `path` and (optionally) is in `hunkIds`. */
+  openFindingsFor(path: string, hunkIds?: Set<string>): FindingEntry[] {
+    return this.sortedFindings.filter(({ finding, key }) => {
+      if (!this.isFindingOpen(key)) return false;
+      if (hunkIds && !hunkIds.has(finding.hunk_id)) return false;
+      return this.hunkIndex.get(finding.hunk_id)?.file.path === path;
+    });
   }
 
   refForFinding(finding: Finding): string {
@@ -136,9 +154,8 @@ export class ReviewState {
   private lineForFinding(finding: Finding) {
     const entry = this.hunkIndex.get(finding.hunk_id);
     if (!entry || finding.line == null) return null;
-    return (
-      entry.hunk.lines.find((l) => (finding.line! < 0 ? l.oldNo === -finding.line! : l.newNo === finding.line)) ?? null
-    );
+    const lineNo = finding.line;
+    return entry.hunk.lines.find((l) => (lineNo < 0 ? l.oldNo === -lineNo : l.newNo === lineNo)) ?? null;
   }
 
   resolveFinding(key: string) {
@@ -160,10 +177,10 @@ export class ReviewState {
     this.comments.push({
       ref: this.refForFinding(finding),
       quote: this.quoteForFinding(finding) || undefined,
+      html: this.quoteHtmlForFinding(finding) || undefined,
       text,
       backend: this.result.backend,
     });
-    this.commentHtml.push(this.quoteHtmlForFinding(finding) || undefined);
     this.sentFindings.add(key);
     if (this.openFinding === key) this.openFinding = null;
   }
@@ -190,16 +207,15 @@ export class ReviewState {
     this.comments.push({
       ref: this.composer.ref,
       quote: this.composer.quote || undefined,
+      html: this.composer.html,
       text: text.trim(),
       backend: this.result.backend,
     });
-    this.commentHtml.push(this.composer.html);
     this.composer = null;
   }
 
   deleteComment(index: number) {
     this.comments.splice(index, 1);
-    this.commentHtml.splice(index, 1);
   }
 
   buildResult(): ReviewResult {
@@ -207,7 +223,14 @@ export class ReviewState {
       .sort((a, b) => a - b)
       .map((i) => ({ backend: this.payload.results[i].backend, items: this.payload.results[i].analysis.notes }))
       .filter((n) => n.items.length > 0);
-    return { comments: this.comments, overall: this.overall.trim(), notes };
+    // Strip client-only `html` before leaving the browser.
+    const comments: ReviewComment[] = this.comments.map(({ ref, quote, text, backend }) => ({
+      ref,
+      quote,
+      text,
+      backend,
+    }));
+    return { comments, overall: this.overall.trim(), notes };
   }
 
   async done() {
