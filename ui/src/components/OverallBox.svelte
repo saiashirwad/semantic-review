@@ -8,19 +8,23 @@
 
 <style>
   textarea {
+    display: block;
     width: 100%;
-    min-height: 70px;
-    padding: 8px 10px;
+    min-height: 88px;
+    padding: 10px 12px;
     resize: vertical;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
+    border: var(--border-w) solid var(--border);
     background: var(--bg-raised);
-    font-size: 13px;
+    box-shadow: var(--shadow-card);
+    font-size: var(--fs-sm);
+    line-height: 1.45;
+    box-sizing: border-box;
   }
 
   textarea:focus {
     outline: none;
     border-color: var(--accent);
+    box-shadow: 0 0 0 2px var(--accent-soft);
   }
 
   textarea::placeholder {

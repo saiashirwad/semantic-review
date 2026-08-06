@@ -23,69 +23,82 @@
 
 <style>
   .empty {
+    width: 100%;
     margin: 0;
+    padding: 10px 12px;
+    border: 1px dashed var(--border);
+    background: var(--bg-raised);
     color: var(--fg-faint);
-    font-size: 12.5px;
+    font-size: var(--fs-sm);
+    box-sizing: border-box;
   }
 
   .card {
+    width: 100%;
     margin-bottom: 8px;
     padding: 10px 12px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
+    border: var(--border-w) solid var(--border);
     background: var(--bg-raised);
     box-shadow: var(--shadow-card);
-    font-size: 13px;
+    font-size: var(--fs-sm);
+    box-sizing: border-box;
   }
 
   .delete {
     float: right;
-    padding: 2px;
+    padding: 0 4px;
     border: 0;
-    border-radius: 4px;
     background: none;
     color: var(--fg-faint);
-    font-size: 11px;
-    line-height: 1;
+    font-size: var(--fs-sm);
+    font-weight: 700;
   }
 
   .delete:hover {
-    background: var(--bg-hover);
     color: var(--fg);
+    background: var(--bg-hover);
   }
 
   .ref {
     overflow: hidden;
     color: var(--fg-faint);
-    font: var(--font-mono);
-    font-size: 10.5px;
+    font-family: var(--font-code);
+    font-size: var(--fs-xs);
     text-overflow: ellipsis;
     white-space: nowrap;
   }
 
+  /* Code quotes: keep real lines intact. No mid-token wrap — scroll instead. */
   blockquote {
     margin: 6px 0;
-    padding: 4px 8px;
-    overflow: hidden;
-    max-height: 72px;
-    border-left: 2px solid var(--border-strong);
-    border-radius: 0 4px 4px 0;
-    background: var(--bg-inset);
-    color: var(--fg-muted);
-    font: var(--font-mono);
-    font-size: 11px;
-    white-space: pre-wrap;
-    word-break: break-all;
+    padding: 6px 8px;
+    overflow: auto;
+    max-height: 88px;
+    border-left: 3px solid var(--border);
+    background: var(--bg-code);
+    color: var(--fg-code);
+    font-family: var(--font-code);
+    font-size: var(--fs-xs);
+    line-height: 1.5;
+    white-space: pre;
+    word-break: normal;
+    overflow-wrap: normal;
+  }
+
+  /* Preserve shiki token colors inside quotes */
+  blockquote :global(span[style]) {
+    background: transparent !important;
   }
 
   .qline {
     display: block;
-    min-height: 1.6em;
+    min-height: 1.5em;
+    white-space: pre;
   }
 
   .text {
     margin-top: 4px;
-    font-size: 12.5px;
+    font-size: var(--fs-sm);
     white-space: pre-wrap;
   }
 </style>

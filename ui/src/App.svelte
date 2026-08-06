@@ -28,9 +28,11 @@
     <Sidebar />
     <main>
       <div class="tldr" data-ctx="TL;DR">
-        <span class="kicker">Summary</span>
+        <div class="tldr-head">
+          <span class="kicker">Summary</span>
+          <span class="tldr-meta">{payload.changeSummary}</span>
+        </div>
         <div class="tldr-body"><Prose text={review.analysis.summary} /></div>
-        <p class="change-summary">{payload.changeSummary}</p>
       </div>
       <Diagram svg={review.result.diagrams.top} source={review.analysis.diagram} />
       {#each review.analysis.sections as section, i (`${review.activeResult}:${i}`)}
@@ -54,44 +56,57 @@
 <style>
   .layout {
     display: grid;
-    grid-template-columns: 240px minmax(0, 1fr) 320px;
+    grid-template-columns: 240px minmax(0, 1fr) minmax(340px, 420px);
     align-items: start;
-    max-width: 1600px;
+    gap: 0 12px;
+    max-width: 1680px;
     margin: 0 auto;
+    width: 100%;
   }
 
   main {
-    max-width: 860px;
     min-width: 0;
-    padding: 28px 32px 120px;
+    width: 100%;
+    padding: 20px 16px 96px;
   }
 
   .tldr {
-    padding: 16px 18px;
-    border: 1px solid var(--border);
+    padding: 16px 18px 18px;
+    border: var(--border-w) solid var(--border);
     border-radius: var(--radius);
     background: var(--bg-raised);
     box-shadow: var(--shadow-card);
   }
 
+  .tldr-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 10px;
+  }
+
   .kicker {
-    display: block;
-    margin-bottom: 4px;
     color: var(--accent);
-    font-size: 10.5px;
-    font-weight: 600;
-    letter-spacing: 0.08em;
+    font-size: var(--fs-xs);
+    font-weight: 700;
+    letter-spacing: 0.1em;
     text-transform: uppercase;
   }
 
-  .tldr-body {
-    font-size: 14px;
+  .tldr-meta {
+    color: var(--fg-faint);
+    font-family: var(--font-code);
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
   }
 
-  .change-summary {
-    margin: 8px 0 0;
-    color: var(--fg-faint);
-    font-size: 12px;
+  .tldr-body {
+    font-size: var(--fs-md);
+    font-weight: 500;
+    line-height: 1.75;
+    color: var(--fg);
   }
 
   .copy-error {
@@ -104,23 +119,26 @@
     gap: 10px;
     padding: 10px 14px;
     transform: translateX(-50%);
+    border: var(--border-w) solid var(--border);
     border-radius: var(--radius);
     background: var(--bg-raised);
     color: var(--sev-critical);
-    font-size: 13px;
+    font-size: var(--fs-sm);
+    font-weight: 600;
     box-shadow: var(--shadow-pop);
   }
 
   .copy-error button {
-    padding: 0;
+    padding: 0 4px;
     border: 0;
     background: none;
-    color: var(--fg-faint);
+    color: var(--fg);
+    font-weight: 700;
   }
 
   @media (max-width: 1100px) {
     .layout {
-      grid-template-columns: minmax(0, 1fr) 300px;
+      grid-template-columns: minmax(0, 1fr) minmax(300px, 380px);
     }
     .layout > :global(nav.sidebar) {
       display: none;
@@ -132,7 +150,7 @@
       display: block;
     }
     main {
-      padding: 20px 14px 64px;
+      padding: 14px 12px 64px;
     }
   }
 </style>

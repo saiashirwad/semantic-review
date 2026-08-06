@@ -1,5 +1,6 @@
 <script lang="ts">
   import { getReviewState } from "../state.svelte";
+  import Check from "./Check.svelte";
   import DiffView from "./DiffView.svelte";
 
   const review = getReviewState();
@@ -16,15 +17,12 @@
           <b class="add">+{file.adds}</b>
           <b class="del">−{file.dels}</b>{file.status !== "modified" ? ` · ${file.status}` : ""}
         </span>
-        <label class="viewed">
-          <input
-            type="checkbox"
-            checked={review.fileViewed(file)}
-            onclick={(e) => e.stopPropagation()}
-            onchange={(e) => review.setFileViewed(file, e.currentTarget.checked)}
-          />
-          Viewed
-        </label>
+        <Check
+          checked={review.fileViewed(file)}
+          label="Viewed"
+          stopPropagation
+          onchange={(v) => review.setFileViewed(file, v)}
+        />
       </summary>
       {#if file.status === "binary"}
         <p class="binary">binary file</p>
@@ -39,44 +37,44 @@
 
 <style>
   section {
-    margin-top: 40px;
+    margin-top: 32px;
+    scroll-margin-top: calc(var(--header-h) + 12px);
   }
 
   h2 {
     display: flex;
     align-items: center;
     gap: 10px;
-    margin: 0 0 6px;
-    font-size: 16px;
-    font-weight: 600;
-    letter-spacing: -0.01em;
+    margin: 0 0 10px;
+    font-size: var(--fs-lg);
+    font-weight: 700;
   }
 
   .num {
     flex-shrink: 0;
-    width: 20px;
-    height: 20px;
-    border-radius: 6px;
-    background: var(--accent-soft);
-    color: var(--accent);
-    font-size: 11.5px;
-    font-weight: 600;
+    width: 24px;
+    height: 24px;
+    border: var(--border-w) solid var(--border);
+    background: var(--bg-raised);
+    color: var(--fg);
+    font-size: var(--fs-sm);
+    font-weight: 700;
     line-height: 20px;
     text-align: center;
   }
 
   details {
     margin: 8px 0;
+    scroll-margin-top: calc(var(--header-h) + 12px);
   }
 
   summary {
     display: flex;
     align-items: center;
     gap: 10px;
-    height: 36px;
-    padding: 0 12px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
+    min-height: 36px;
+    padding: 6px 12px;
+    border: var(--border-w) solid var(--border);
     background: var(--bg-raised);
     box-shadow: var(--shadow-card);
     cursor: pointer;
@@ -93,8 +91,8 @@
 
   .chevron {
     color: var(--fg-faint);
-    font-size: 10px;
-    transition: transform 0.12s;
+    font-size: var(--fs-sm);
+    transition: transform 0.1s;
   }
 
   details[open] .chevron {
@@ -105,8 +103,8 @@
     flex: 1;
     min-width: 0;
     overflow: hidden;
-    font: var(--font-mono);
-    font-size: 12px;
+    font-family: var(--font-code);
+    font-size: var(--fs-sm);
     font-weight: 600;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -114,41 +112,23 @@
 
   .counts {
     color: var(--fg-muted);
-    font-size: 11.5px;
+    font-size: var(--fs-xs);
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
   }
 
   .add {
-    color: var(--add-fg);
-    font-weight: 500;
+    color: var(--selected);
+    font-weight: 700;
   }
 
   .del {
-    color: var(--del-fg);
-    font-weight: 500;
-  }
-
-  .viewed {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    color: var(--fg-muted);
-    font-size: 11.5px;
-    white-space: nowrap;
-    cursor: pointer;
-  }
-
-  .viewed input {
-    width: 13px;
-    height: 13px;
-    margin: 0;
-    accent-color: var(--accent);
+    color: var(--sev-critical);
+    font-weight: 700;
   }
 
   .binary {
     color: var(--fg-faint);
-    font-size: 13px;
-    font-style: italic;
+    font-size: var(--fs-sm);
   }
 </style>

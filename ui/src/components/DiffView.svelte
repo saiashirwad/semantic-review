@@ -1,13 +1,14 @@
 <script lang="ts">
   import type { PayloadFile, PayloadHunk, PayloadLine } from "../../../src/payload";
   import { getReviewState } from "../state.svelte";
+  import Check from "./Check.svelte";
   import FindingPopover from "./FindingPopover.svelte";
 
   interface Props {
     file: PayloadFile;
     hunk: PayloadHunk;
     range?: { from: number; to: number } | null;
-    viewable?: boolean; // show the "Viewed" checkbox
+    viewable?: boolean;
   }
 
   const { file, hunk, range = null, viewable = false }: Props = $props();
@@ -28,7 +29,6 @@
   const hiddenAbove = $derived(elided ? excerptIndices[0] : 0);
   const hiddenBelow = $derived(elided ? hunk.lines.length - 1 - excerptIndices[excerptIndices.length - 1] : 0);
 
-  // Split view: zip consecutive del-run + add-run into left/right pairs.
   interface SplitRow {
     left: { line: PayloadLine; idx: number } | null;
     right: { line: PayloadLine; idx: number } | null;
@@ -67,6 +67,14 @@
     return review.findingsAt(hunk.id, idx).filter(({ key }) => !review.resolvedFindings.has(key));
   }
 
+  function openComment(line: PayloadLine, e: MouseEvent) {
+    const rect = (e.currentTarget as HTMLElement).closest("tr")!.getBoundingClientRect();
+    review.openComposer(refFor(line), line.text, {
+      html: line.html,
+      anchor: { left: rect.left + window.scrollX, top: rect.bottom + window.scrollY },
+    });
+  }
+
   const hunkFlags = $derived(review.findingsAt(hunk.id, null).filter(({ key }) => !review.resolvedFindings.has(key)));
 </script>
 
@@ -90,7 +98,16 @@
   {/if}
 {/snippet}
 
-{#snippet cell(entry: { line: PayloadLine; idx: number } | null, side: "left" | "right" | "both")}
+{#snippet act(entry: { line: PayloadLine; idx: number } | null)}
+  <td class="act">
+    {#if entry}
+      <button class="lc" title="Comment on this line" onclick={(e) => openComment(entry.line, e)}>+</button>
+      {@render gutterFlag(entry.idx)}
+    {/if}
+  </td>
+{/snippet}
+
+{#snippet cell(entry: { line: PayloadLine; idx: number } | null, side: "left" | "right")}
   {#if entry}
     {@const { line, idx } = entry}
     <td class="g">{side === "right" ? (line.newNo ?? "") : (line.oldNo ?? line.newNo ?? "")}</td>
@@ -102,20 +119,6 @@
       data-html={line.html}
       data-text={line.text}
     >
-      <button
-        class="lc"
-        title="Comment on this line"
-        onclick={(e) => {
-          const rect = e.currentTarget.closest("tr")!.getBoundingClientRect();
-          review.openComposer(refFor(line), line.text, {
-            html: line.html,
-            anchor: { left: rect.left + window.scrollX, top: rect.bottom + window.scrollY },
-          });
-        }}
-      >
-        +
-      </button>
-      {@render gutterFlag(idx)}
       {@html line.html || "&nbsp;"}
     </td>
   {:else}
@@ -148,10 +151,13 @@
       </span>
     {/if}
     {#if viewable}
-      <label class="viewed">
-        <input type="checkbox" checked={review.viewedHunks.has(hunk.id)} onchange={() => review.toggleViewed(hunk.id)} />
-        Viewed
-      </label>
+      <span class="viewed">
+        <Check
+          checked={review.viewedHunks.has(hunk.id)}
+          label="Viewed"
+          onchange={() => review.toggleViewed(hunk.id)}
+        />
+      </span>
     {/if}
   </div>
   {#if elided && hiddenAbove > 0}
@@ -165,6 +171,7 @@
         {#each excerptIndices as idx (idx)}
           {@const line = hunk.lines[idx]}
           <tr>
+            {@render act({ line, idx })}
             <td class="g">{line.oldNo ?? ""}</td>
             {@render cell({ line, idx }, "right")}
           </tr>
@@ -176,6 +183,7 @@
       <tbody>
         {#each splitRows as row, i (i)}
           <tr>
+            {@render act(row.left ?? row.right)}
             {@render cell(row.left, "left")}
             {@render cell(row.right, "right")}
           </tr>
@@ -194,44 +202,44 @@
   .hunk {
     margin: 12px 0;
     overflow: hidden;
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    background: var(--bg-raised);
+    border: var(--border-w) solid var(--border);
+    background: var(--bg-code);
+    color: var(--fg-code);
     box-shadow: var(--shadow-card);
+    font-family: var(--font-code);
   }
 
   .head {
     display: flex;
     align-items: center;
-    gap: 10px;
-    height: 32px;
-    padding: 0 12px;
-    border-bottom: 1px solid var(--border);
-    background: var(--bg-inset);
-    font: var(--font-mono);
-    font-size: 11.5px;
+    gap: 8px;
+    min-height: 32px;
+    padding: 6px 12px;
+    border-bottom: var(--border-w) solid color-mix(in srgb, var(--fg-code) 18%, transparent);
+    background: #0a0a0a;
+    font-family: var(--font-code);
+    font-size: var(--fs-sm);
   }
 
   .path {
-    color: var(--fg);
-    font-weight: 600;
+    color: var(--fg-code);
+    font-weight: 700;
   }
 
   .tag {
     padding: 1px 6px;
-    border-radius: 4px;
-    background: var(--accent-soft);
-    color: var(--accent);
-    font-family: var(--font-sans);
+    border: 1px solid var(--accent);
+    background: var(--accent);
+    color: var(--accent-fg);
     font-size: 10px;
-    font-weight: 600;
-    letter-spacing: 0.06em;
+    font-weight: 700;
+    letter-spacing: 0.04em;
     text-transform: uppercase;
   }
 
   .header {
     overflow: hidden;
-    color: var(--fg-faint);
+    color: color-mix(in srgb, var(--fg-code) 50%, transparent);
     text-overflow: ellipsis;
     white-space: nowrap;
   }
@@ -243,41 +251,42 @@
   .viewed {
     display: flex;
     align-items: center;
-    gap: 5px;
-    color: var(--fg-muted);
-    font-family: var(--font-sans);
-    font-size: 11.5px;
-    white-space: nowrap;
-    cursor: pointer;
-  }
-
-  .viewed input {
-    width: 13px;
-    height: 13px;
-    margin: 0;
-    accent-color: var(--accent);
   }
 
   .expand {
     display: block;
     width: 100%;
-    padding: 3px 12px;
+    padding: 5px 12px;
     border: 0;
-    background: var(--accent-soft);
-    color: var(--accent);
-    font: var(--font-mono);
-    font-size: 11px;
+    border-bottom: 1px solid color-mix(in srgb, var(--fg-code) 12%, transparent);
+    background: #1a1a1a;
+    color: var(--add-fg);
+    font-size: var(--fs-xs);
+    font-weight: 600;
     text-align: left;
   }
 
+  .expand:last-child {
+    border-bottom: 0;
+    border-top: 1px solid color-mix(in srgb, var(--fg-code) 12%, transparent);
+  }
+
   .expand:hover {
-    background: color-mix(in srgb, var(--accent) 14%, transparent);
+    background: #222;
   }
 
   table.diff {
     width: 100%;
     border-collapse: collapse;
-    font: var(--font-mono);
+    font-family: var(--font-code);
+    font-size: var(--fs-sm);
+    line-height: 1.55;
+  }
+
+  /* Keep flagged lines clear of the sticky header when scrolled into view */
+  table.diff tr {
+    scroll-margin-top: calc(var(--header-h) + 12px);
+    scroll-margin-bottom: 12px;
   }
 
   table.split {
@@ -291,12 +300,27 @@
     vertical-align: top;
   }
 
+  /* Leftmost gutter — comment + / finding flags, outside the code */
+  .act {
+    width: 28px;
+    min-width: 28px;
+    max-width: 28px;
+    padding: 1px 2px;
+    text-align: center;
+    vertical-align: middle;
+    background: #0a0a0a;
+    border-right: 1px solid color-mix(in srgb, var(--fg-code) 12%, transparent);
+    user-select: none;
+    white-space: nowrap;
+    word-break: normal;
+  }
+
   .g {
     width: 1%;
     min-width: 36px;
     text-align: right;
-    color: var(--fg-faint);
-    font-size: 11px;
+    color: color-mix(in srgb, var(--fg-code) 35%, transparent);
+    font-size: var(--fs-xs);
     font-variant-numeric: tabular-nums;
     user-select: none;
     white-space: nowrap;
@@ -309,8 +333,9 @@
 
   .m {
     width: 1%;
-    color: var(--fg-faint);
+    color: color-mix(in srgb, var(--fg-code) 35%, transparent);
     user-select: none;
+    font-weight: 700;
   }
 
   .m.add {
@@ -322,63 +347,64 @@
   }
 
   .c {
-    position: relative;
-    padding-left: 26px;
+    padding-left: 8px;
+  }
+
+  /* Keep shiki inline colors; only tint the row background */
+  .c :global(span[style]) {
+    background: transparent !important;
   }
 
   .c.add {
-    background: var(--add-bg);
+    background: var(--add-row);
   }
 
   .c.del {
-    background: var(--del-bg);
+    background: var(--del-row);
   }
 
   .c.flagged {
-    box-shadow: inset 2px 0 0 var(--sev-major);
+    box-shadow: inset 3px 0 0 var(--sev-major);
   }
 
   .c.spacer {
-    background: var(--bg-inset);
+    background: #0a0a0a;
   }
 
-  table:not(.split) tr:has(.c.add) td {
-    background: var(--add-bg);
+  table:not(.split) tr:has(.c.add) td:not(.act) {
+    background: var(--add-row);
   }
 
-  table:not(.split) tr:has(.c.del) td {
-    background: var(--del-bg);
+  table:not(.split) tr:has(.c.del) td:not(.act) {
+    background: var(--del-row);
   }
 
   tr:hover .c:not(.spacer) {
-    background: var(--bg-hover);
+    background: #1a1a1a;
   }
 
   tr:hover .c.add {
-    background: color-mix(in srgb, var(--add-bg) 70%, var(--bg-hover));
+    background: color-mix(in srgb, var(--add-row) 85%, #1a1a1a);
   }
 
   tr:hover .c.del {
-    background: color-mix(in srgb, var(--del-bg) 70%, var(--bg-hover));
+    background: color-mix(in srgb, var(--del-row) 85%, #1a1a1a);
   }
 
   .lc {
-    position: absolute;
-    left: 3px;
-    top: 2px;
-    width: 16px;
-    height: 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
     padding: 0;
-    border: 0;
-    border-radius: 4px;
+    border: 1px solid var(--border);
     background: var(--accent);
     color: var(--accent-fg);
-    font-size: 12px;
-    font-weight: 600;
-    line-height: 16px;
-    text-align: center;
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1;
     opacity: 0;
-    transition: opacity 0.08s;
   }
 
   tr:hover .lc {
@@ -394,24 +420,27 @@
     display: inline-block;
   }
 
+  .act .flag-anchor {
+    display: block;
+  }
+
   .flag {
     min-width: 16px;
     height: 16px;
     padding: 0 4px;
-    border: 0;
-    border-radius: 4px;
-    background: color-mix(in srgb, var(--sev-major) 14%, transparent);
-    color: var(--sev-major);
-    font-size: 10.5px;
+    border: 1px solid var(--sev-major);
+    background: var(--sev-major);
+    color: #fff;
+    font-size: 11px;
     font-weight: 700;
-    line-height: 16px;
+    line-height: 14px;
   }
 
   .flag:hover {
-    background: color-mix(in srgb, var(--sev-major) 24%, transparent);
+    filter: brightness(1.1);
   }
 
   .flag.wide {
-    font-family: var(--font-sans);
+    font-size: 11px;
   }
 </style>

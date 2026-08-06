@@ -18,6 +18,16 @@
 
 <style>
   p {
-    margin: 5px 0;
+    margin: 6px 0;
+    /* Extra leading so inline code chips + hard shadows don't collide on wrap */
+    line-height: 1.75;
+  }
+
+  p:first-child {
+    margin-top: 0;
+  }
+
+  p:last-child {
+    margin-bottom: 0;
   }
 </style>

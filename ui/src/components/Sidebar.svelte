@@ -1,9 +1,13 @@
 <script lang="ts">
+  import { onMount } from "svelte";
+  import type { PayloadFile } from "../../../src/payload";
   import { getReviewState } from "../state.svelte";
+  import Check from "./Check.svelte";
 
   const review = getReviewState();
 
-  // Files referenced by each section's snippets, deduplicated, in order.
+  let activeId = $state("section-0");
+
   const sectionFiles = $derived(
     review.analysis.sections.map((section) => {
       const paths: string[] = [];
@@ -15,195 +19,474 @@
     }),
   );
 
+  const fullDiffId = "full-diff";
+  const fullDiffNum = $derived(review.analysis.sections.length + 1);
+  const fileCount = $derived(review.payload.files.length);
+  const viewedCount = $derived(review.viewedFileCount);
+
+  function basename(path: string): string {
+    const i = path.lastIndexOf("/");
+    return i >= 0 ? path.slice(i + 1) : path;
+  }
+
+  function dirname(path: string): string {
+    const i = path.lastIndexOf("/");
+    return i > 0 ? path.slice(0, i) : "";
+  }
+
   function jump(id: string) {
+    activeId = id;
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
-  function findingCount(path: string): number {
+  function jumpToFile(file: PayloadFile) {
+    activeId = fullDiffId;
+    const target = `Full diff: ${file.path}`;
+    const details = [...document.querySelectorAll("details")].find(
+      (d) => d.getAttribute("data-ctx") === target,
+    ) as HTMLDetailsElement | undefined;
+    if (details) details.open = true;
+    (details ?? document.getElementById(fullDiffId))?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function sectionHunkIds(sectionIndex: number): Set<string> {
+    return new Set(review.analysis.sections[sectionIndex]?.snippets.map((s) => s.hunk_id) ?? []);
+  }
+
+  function openFindingsFor(sectionIndex: number, path: string) {
+    const hunks = sectionHunkIds(sectionIndex);
+    const hit = review.sortedFindings.find(({ finding, key }) => {
+      if (review.resolvedFindings.has(key) || review.sentFindings.has(key)) return false;
+      if (!hunks.has(finding.hunk_id)) return false;
+      return review.hunkIndex.get(finding.hunk_id)?.file.path === path;
+    });
+    if (hit) void review.jumpToFinding(hit.key);
+  }
+
+  function findingCount(sectionIndex: number, path: string): number {
+    const hunks = sectionHunkIds(sectionIndex);
     return review.sortedFindings.filter(({ finding, key }) => {
       if (review.resolvedFindings.has(key) || review.sentFindings.has(key)) return false;
+      if (!hunks.has(finding.hunk_id)) return false;
       return review.hunkIndex.get(finding.hunk_id)?.file.path === path;
     }).length;
   }
+
+  onMount(() => {
+    const ids = [
+      ...review.analysis.sections.map((_, i) => `section-${i}`),
+      fullDiffId,
+    ];
+    const elements = ids.map((id) => document.getElementById(id)).filter((el): el is HTMLElement => !!el);
+    if (elements.length === 0) return;
+
+    // Track intersection state across callbacks so active step stays accurate.
+    const visible = new Map<string, number>();
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) {
+          visible.set(e.target.id, e.isIntersecting ? e.intersectionRatio : 0);
+        }
+        let bestId = "";
+        let bestRatio = 0;
+        for (const id of ids) {
+          const ratio = visible.get(id) ?? 0;
+          if (ratio > bestRatio) {
+            bestRatio = ratio;
+            bestId = id;
+          }
+        }
+        if (bestId) activeId = bestId;
+      },
+      { rootMargin: "-12% 0px -50% 0px", threshold: [0, 0.15, 0.35, 0.55, 0.75] },
+    );
+    for (const el of elements) observer.observe(el);
+    return () => observer.disconnect();
+  });
 </script>
 
-<nav class="sidebar">
-  <div class="label">Walkthrough</div>
-  {#each review.analysis.sections as section, i}
-    <div class="entry">
-      <button class="heading" onclick={() => jump(`section-${i}`)}>
-        <span class="num">{i + 1}</span>
-        <span class="heading-text">{section.heading}</span>
+<nav class="sidebar" aria-label="Walkthrough">
+  <header class="head">
+    <span class="label">Walkthrough</span>
+    <span class="progress" title="Files marked viewed">
+      <b>{viewedCount}</b><span class="slash">/</span>{fileCount}
+    </span>
+  </header>
+
+  <ol class="steps">
+    {#each review.analysis.sections as section, i}
+      {@const id = `section-${i}`}
+      {@const active = activeId === id}
+      <li class="step" class:active>
+        <button type="button" class="step-btn" class:active aria-current={active ? "true" : undefined} onclick={() => jump(id)}>
+          <span class="num" aria-hidden="true">{i + 1}</span>
+          <span class="step-text">{section.heading}</span>
+        </button>
+        {#if sectionFiles[i].length > 0}
+          <ul class="meta">
+            {#each sectionFiles[i] as path}
+              {@const n = findingCount(i, path)}
+              <li>
+                <!-- Basename first (never truncated); dir is secondary and may ellipsize -->
+                <span class="file-meta" title={path}>
+                  <span class="base">{basename(path)}</span>
+                  {#if dirname(path)}
+                    <span class="dir">{dirname(path)}</span>
+                  {/if}
+                </span>
+                {#if n > 0}
+                  <button
+                    type="button"
+                    class="badge"
+                    title="{n} open finding{n === 1 ? '' : 's'} — jump to first"
+                    onclick={() => openFindingsFor(i, path)}
+                  >
+                    {n}
+                  </button>
+                {/if}
+              </li>
+            {/each}
+          </ul>
+        {/if}
+      </li>
+    {/each}
+
+    <li class="step step-files" class:active={activeId === fullDiffId}>
+      <button
+        type="button"
+        class="step-btn"
+        class:active={activeId === fullDiffId}
+        aria-current={activeId === fullDiffId ? "true" : undefined}
+        onclick={() => jump(fullDiffId)}
+      >
+        <span class="num" aria-hidden="true">{fullDiffNum}</span>
+        <span class="step-text">Full diff</span>
       </button>
-      {#if sectionFiles[i].length > 0}
-        <ul>
-          {#each sectionFiles[i] as path}
-            <li class="file">
-              <span class="path" title={path}>{path}</span>
-              {#if findingCount(path) > 0}
-                <span class="badge" title="Open findings in this file">{findingCount(path)}</span>
-              {/if}
-            </li>
-          {/each}
-        </ul>
-      {/if}
-    </div>
-  {/each}
-  <div class="entry">
-    <button class="heading" onclick={() => jump("full-diff")}>
-      <span class="num">{review.analysis.sections.length + 1}</span>
-      <span class="heading-text">Full diff</span>
-    </button>
-    <ul>
-      {#each review.payload.files as file}
-        <li class="file">
-          <label title="Mark file as viewed">
-            <input
-              type="checkbox"
-              checked={review.fileViewed(file)}
-              onchange={(e) => review.setFileViewed(file, e.currentTarget.checked)}
+
+      <ul class="checklist" aria-label="Files to review">
+        {#each review.payload.files as file (file.path)}
+          {@const viewed = review.fileViewed(file)}
+          <li class="check-row" class:viewed>
+            <Check
+              checked={viewed}
+              pad
+              ariaLabel={viewed ? `Unmark ${file.path} as viewed` : `Mark ${file.path} as viewed`}
+              onchange={() => review.setFileViewed(file, !viewed)}
             />
-            <span class="path" class:struck={review.fileViewed(file)} title={file.path}>{file.path}</span>
-          </label>
-          <span class="counts"><b class="add">+{file.adds}</b> <b class="del">−{file.dels}</b></span>
-        </li>
-      {/each}
-    </ul>
-  </div>
+            <button type="button" class="file-jump" title={file.path} onclick={() => jumpToFile(file)}>
+              <span class="file-name">
+                <span class="base">{basename(file.path)}</span>
+                {#if dirname(file.path)}
+                  <span class="dir">{dirname(file.path)}</span>
+                {/if}
+              </span>
+              <span class="counts">
+                <b class="add">+{file.adds}</b>
+                <b class="del">−{file.dels}</b>
+              </span>
+            </button>
+          </li>
+        {/each}
+      </ul>
+    </li>
+  </ol>
 </nav>
 
 <style>
   nav {
     position: sticky;
-    top: 48px;
-    height: calc(100vh - 48px);
+    top: var(--header-h);
+    height: calc(100vh - var(--header-h));
     overflow-y: auto;
-    padding: 20px 12px 20px 20px;
+    padding: 18px 12px 24px 14px;
+  }
+
+  .head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 14px;
+    padding: 0 4px;
   }
 
   .label {
-    margin-bottom: 10px;
     color: var(--fg-faint);
-    font-size: 10.5px;
-    font-weight: 600;
-    letter-spacing: 0.08em;
+    font-size: var(--fs-xs);
+    font-weight: 700;
+    letter-spacing: 0.1em;
     text-transform: uppercase;
   }
 
-  .entry {
-    margin-bottom: 16px;
+  .progress {
+    color: var(--fg-faint);
+    font-family: var(--font-code);
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
   }
 
-  .heading {
+  .progress b {
+    color: var(--fg);
+    font-weight: 700;
+  }
+
+  .slash {
+    margin: 0 1px;
+    color: var(--fg-faint);
+  }
+
+  .steps {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .step {
+    position: relative;
+    margin: 0 0 4px;
+    padding-bottom: 8px;
+  }
+
+  /* Vertical guide rail */
+  .step:not(:last-child)::before {
+    content: "";
+    position: absolute;
+    left: 15px;
+    top: 28px;
+    bottom: 0;
+    width: 2px;
+    background: color-mix(in srgb, var(--border) 18%, transparent);
+  }
+
+  .step-btn {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
     width: 100%;
-    padding: 4px 6px;
-    margin-left: -6px;
+    min-height: 32px;
+    padding: 5px 6px;
     border: 0;
-    border-radius: var(--radius-sm);
-    background: none;
-    font-size: 13px;
-    font-weight: 500;
+    border-radius: 0;
+    background: transparent;
+    color: var(--fg-muted);
+    font-size: var(--fs-sm);
+    font-weight: 600;
     text-align: left;
+    cursor: pointer;
+    transition: background 0.08s ease, color 0.08s ease;
   }
 
-  .heading:hover {
+  .step-btn:hover {
     background: var(--bg-hover);
+    color: var(--fg);
   }
 
-  .heading-text {
+  .step-btn.active {
+    color: var(--fg);
+  }
+
+  .step-text {
+    flex: 1;
+    min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    line-height: 1.3;
   }
 
   .num {
     flex-shrink: 0;
-    width: 18px;
-    height: 18px;
-    border-radius: 5px;
-    background: var(--accent-soft);
-    color: var(--accent);
+    display: grid;
+    place-items: center;
+    width: 22px;
+    height: 22px;
+    border: var(--border-w) solid var(--border);
+    background: var(--bg-raised);
+    color: var(--fg);
+    font-family: var(--font-code);
     font-size: 11px;
-    font-weight: 600;
-    line-height: 18px;
-    text-align: center;
+    font-weight: 700;
+    line-height: 1;
+    transition: background 0.08s ease, color 0.08s ease, box-shadow 0.08s ease;
   }
 
-  ul {
+  .step-btn.active .num {
+    background: var(--fg);
+    color: var(--bg-raised);
+    box-shadow: 2px 2px 0 var(--accent);
+  }
+
+  .step-btn:hover .num {
+    box-shadow: 2px 2px 0 var(--border);
+  }
+
+  .step-btn.active:hover .num {
+    box-shadow: 2px 2px 0 var(--accent);
+  }
+
+  /* Files under a narrative section */
+  .meta {
     margin: 2px 0 0;
-    padding: 0 0 0 26px;
+    padding: 0 6px 0 38px;
     list-style: none;
   }
 
-  .file {
+  .meta li {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 6px;
-    padding: 2px 0;
-    color: var(--fg-muted);
-    font: var(--font-mono);
-    font-size: 11.5px;
+    min-height: 22px;
+    padding: 1px 0;
   }
 
-  .file label {
-    display: flex;
-    align-items: center;
-    gap: 6px;
+  .file-meta {
+    flex: 1;
     min-width: 0;
-    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    font-family: var(--font-code);
+    font-size: 11px;
+    line-height: 1.25;
   }
 
-  .file input {
-    flex-shrink: 0;
-    width: 13px;
-    height: 13px;
-    margin: 0;
-    accent-color: var(--accent);
-  }
-
-  .path {
+  .file-meta .base {
+    color: var(--fg-muted);
+    font-weight: 600;
     overflow: hidden;
-    direction: rtl;
-    text-align: left;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
 
-  .path.struck {
-    color: var(--fg-faint);
-    text-decoration: line-through;
+  .file-meta .dir {
+    color: color-mix(in srgb, var(--fg-faint) 75%, transparent);
+    font-size: 10px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .badge {
     flex-shrink: 0;
-    min-width: 15px;
-    padding: 0 4px;
-    border-radius: 7px;
-    background: color-mix(in srgb, var(--sev-major) 14%, transparent);
-    color: var(--sev-major);
+    align-self: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border: var(--border-w) solid var(--border);
+    background: var(--accent);
+    color: var(--accent-fg);
+    font-family: var(--font-code);
     font-size: 10px;
-    font-weight: 600;
-    line-height: 15px;
+    font-weight: 700;
+    line-height: 14px;
     text-align: center;
+    cursor: pointer;
+  }
+
+  .badge:hover {
+    background: var(--accent-hover);
+  }
+
+  /* Full-diff checklist */
+  .checklist {
+    margin: 6px 0 0 28px;
+    padding: 4px;
+    list-style: none;
+    border: var(--border-w) solid var(--border);
+    background: var(--bg-raised);
+    box-shadow: var(--shadow-card);
+  }
+
+  .check-row {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+  }
+
+  .check-row + .check-row {
+    border-top: 1px solid color-mix(in srgb, var(--border) 14%, transparent);
+  }
+
+  .check-row :global(.check.pad) {
+    flex-shrink: 0;
+    border-right: 1px solid color-mix(in srgb, var(--border) 14%, transparent);
+    border-radius: 0;
+  }
+
+  .file-jump {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    min-height: 40px;
+    padding: 6px 8px;
+    border: 0;
+    background: transparent;
+    color: var(--fg);
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .file-jump:hover {
+    background: var(--bg-hover);
+  }
+
+  /* Stack name over dir so the full basename always fits */
+  .file-name {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    font-family: var(--font-code);
+    line-height: 1.25;
+  }
+
+  .file-name .base {
+    color: var(--fg);
+    font-size: 12px;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .file-name .dir {
+    color: var(--fg-faint);
+    font-size: 10px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .check-row.viewed .base {
+    color: var(--fg-faint);
+    text-decoration: line-through;
+    text-decoration-thickness: 1px;
+  }
+
+  .check-row.viewed .dir {
+    color: color-mix(in srgb, var(--fg-faint) 55%, transparent);
   }
 
   .counts {
     flex-shrink: 0;
-    margin-left: auto;
-    font-size: 10.5px;
+    align-self: center;
+    display: inline-flex;
+    gap: 4px;
+    font-family: var(--font-code);
+    font-size: 10px;
     font-variant-numeric: tabular-nums;
+    font-weight: 700;
   }
 
   .add {
-    color: var(--add-fg);
-    font-weight: 500;
+    color: var(--selected);
   }
 
   .del {
-    color: var(--del-fg);
-    font-weight: 500;
+    color: var(--sev-critical);
   }
 </style>

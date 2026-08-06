@@ -1,5 +1,6 @@
 <script lang="ts">
   import { getReviewState } from "../state.svelte";
+  import Check from "./Check.svelte";
   import Prose from "./Prose.svelte";
 
   const review = getReviewState();
@@ -14,14 +15,11 @@
   <section class="notes" data-ctx="Agent's notes">
     <div class="head">
       <h2>Agent&#8217;s notes</h2>
-      <label>
-        <input
-          type="checkbox"
-          checked={review.includeNotes.has(review.activeResult)}
-          onchange={(e) => toggle(e.currentTarget.checked)}
-        />
-        Include in review
-      </label>
+      <Check
+        checked={review.includeNotes.has(review.activeResult)}
+        label="Include in review"
+        onchange={toggle}
+      />
     </div>
     <ul>
       {#each review.analysis.notes as note}
@@ -33,10 +31,9 @@
 
 <style>
   .notes {
-    margin-top: 40px;
-    padding: 16px 18px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
+    margin-top: 32px;
+    padding: 14px 16px;
+    border: var(--border-w) solid var(--border);
     background: var(--bg-raised);
     box-shadow: var(--shadow-card);
   }
@@ -45,39 +42,26 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 16px;
+    gap: 12px;
   }
 
   h2 {
     margin: 0;
-    font-size: 13px;
-    font-weight: 600;
-  }
-
-  label {
-    display: flex;
-    align-items: center;
-    gap: 6px;
+    font-size: var(--fs-xs);
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
     color: var(--fg-muted);
-    font-size: 12px;
-    cursor: pointer;
-  }
-
-  input {
-    width: 13px;
-    height: 13px;
-    margin: 0;
-    accent-color: var(--accent);
   }
 
   ul {
-    margin: 8px 0 0;
+    margin: 10px 0 0;
     padding-left: 18px;
   }
 
   li {
     margin: 4px 0;
     color: var(--fg-muted);
-    font-size: 13px;
+    font-size: var(--fs-sm);
   }
 </style>

@@ -6,13 +6,11 @@
 </script>
 
 <header>
-  <span class="brand">semantic-review</span>
-  <span class="divider"></span>
   <h1>{review.payload.title}</h1>
   <span class="progress" title="Files fully viewed · lines not yet viewed">
-    {review.viewedFileCount}<span class="dim">/{fileCount} files</span>
+    <b>{review.viewedFileCount}</b>/{fileCount} files
     <span class="dot">·</span>
-    {review.linesLeft.toLocaleString()}<span class="dim"> lines left</span>
+    <b>{review.linesLeft.toLocaleString()}</b> lines left
   </span>
   {#if review.multiTab}
     <select
@@ -41,26 +39,11 @@
     z-index: 20;
     display: flex;
     align-items: center;
-    gap: 12px;
-    height: 48px;
-    padding: 0 20px;
-    border-bottom: 1px solid var(--border);
-    background: color-mix(in srgb, var(--bg) 88%, transparent);
-    backdrop-filter: blur(10px);
-  }
-
-  .brand {
-    color: var(--fg-faint);
-    font-size: 12.5px;
-    font-weight: 500;
-    letter-spacing: 0.01em;
-    white-space: nowrap;
-  }
-
-  .divider {
-    width: 1px;
-    height: 16px;
-    background: var(--border-strong);
+    gap: 10px;
+    height: var(--header-h);
+    padding: 0 16px;
+    border-bottom: var(--border-w) solid var(--border);
+    background: var(--bg-raised);
   }
 
   h1 {
@@ -68,22 +51,23 @@
     min-width: 0;
     margin: 0;
     overflow: hidden;
-    font-size: 13.5px;
+    font-size: var(--fs-md);
     font-weight: 600;
-    letter-spacing: -0.01em;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
 
   .progress {
-    color: var(--fg);
-    font-size: 12px;
+    padding: 4px 8px;
+    border: var(--border-w) solid var(--border);
+    background: var(--bg-panel);
+    font-size: var(--fs-xs);
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
   }
 
-  .dim {
-    color: var(--fg-faint);
+  .progress b {
+    font-weight: 700;
   }
 
   .dot {
@@ -92,71 +76,83 @@
   }
 
   select {
-    height: 28px;
-    padding: 0 6px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
+    height: 30px;
+    padding: 0 8px;
+    border: var(--border-w) solid var(--border);
+    border-radius: var(--radius);
     background: var(--bg-raised);
-    font-size: 12.5px;
-  }
-
-  select:hover {
-    border-color: var(--border-strong);
+    font-size: var(--fs-sm);
+    font-weight: 500;
+    box-shadow: var(--shadow-btn);
   }
 
   .toggle {
     display: inline-flex;
-    gap: 2px;
-    padding: 2px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
+    border: var(--border-w) solid var(--border);
     background: var(--bg-inset);
+    overflow: hidden;
   }
 
   .toggle button {
-    height: 22px;
+    height: 28px;
     padding: 0 10px;
     border: 0;
-    border-radius: 4px;
+    border-right: var(--border-w) solid var(--border);
+    border-radius: 0;
     background: transparent;
     color: var(--fg-muted);
-    font-size: 12px;
-    font-weight: 500;
+    font-size: var(--fs-xs);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+
+  .toggle button:last-child {
+    border-right: 0;
   }
 
   .toggle button:hover {
     color: var(--fg);
+    background: var(--bg-hover);
   }
 
   .toggle button.active {
-    background: var(--bg-raised);
-    color: var(--fg);
-    box-shadow: var(--shadow-card);
+    background: var(--accent);
+    color: var(--accent-fg);
   }
 
   .done {
-    height: 28px;
+    height: 32px;
     padding: 0 14px;
-    border: 0;
-    border-radius: var(--radius-sm);
-    background: var(--accent);
-    color: var(--accent-fg);
-    font-size: 12.5px;
-    font-weight: 600;
+    border: var(--border-w) solid var(--border);
+    border-radius: var(--radius);
+    background: var(--action);
+    color: var(--action-fg);
+    font-size: var(--fs-sm);
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    box-shadow: var(--shadow-btn);
   }
 
   .done:hover {
-    background: var(--accent-hover);
+    background: var(--action-hover);
+  }
+
+  .done:active {
+    transform: translate(1px, 1px);
+    box-shadow: none;
   }
 
   @media (max-width: 800px) {
     header {
       flex-wrap: wrap;
       height: auto;
-      padding: 8px 14px;
+      padding: 8px 12px;
+      gap: 8px;
     }
     h1 {
-      flex-basis: calc(100% - 140px);
+      flex-basis: calc(100% - 160px);
     }
     .progress {
       order: 5;

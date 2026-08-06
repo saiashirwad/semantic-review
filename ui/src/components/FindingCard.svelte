@@ -27,8 +27,8 @@
 
 <style>
   .card {
-    padding: 9px 12px;
-    border-bottom: 1px solid var(--border);
+    padding: 10px 12px;
+    border-bottom: var(--border-w) solid var(--border);
   }
 
   .card:last-child {
@@ -40,7 +40,7 @@
   }
 
   .card.muted {
-    opacity: 0.55;
+    opacity: 0.5;
   }
 
   .body {
@@ -56,10 +56,10 @@
 
   .sev {
     flex-shrink: 0;
-    width: 8px;
-    height: 8px;
-    margin-top: 5px;
-    border-radius: 50%;
+    width: 10px;
+    height: 10px;
+    margin-top: 4px;
+    border: 1px solid var(--border);
   }
 
   .sev-critical {
@@ -83,9 +83,9 @@
   .title {
     display: block;
     overflow: hidden;
-    font-size: 12.5px;
-    font-weight: 500;
-    line-height: 1.4;
+    font-size: var(--fs-sm);
+    font-weight: 600;
+    line-height: 1.35;
   }
 
   .ref {
@@ -93,8 +93,8 @@
     margin-top: 2px;
     overflow: hidden;
     color: var(--fg-faint);
-    font: var(--font-mono);
-    font-size: 10.5px;
+    font-family: var(--font-code);
+    font-size: var(--fs-xs);
     text-overflow: ellipsis;
     white-space: nowrap;
   }
@@ -103,14 +103,17 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    margin: 3px 0 0 16px;
+    margin: 4px 0 0 18px;
   }
 
   .state-tag {
-    color: var(--fg-faint);
+    padding: 1px 6px;
+    border: 1px solid var(--border);
+    background: var(--selected-soft);
+    color: var(--selected-fg);
     font-size: 10px;
-    font-weight: 600;
-    letter-spacing: 0.06em;
+    font-weight: 700;
+    letter-spacing: 0.04em;
     text-transform: uppercase;
   }
 
@@ -119,7 +122,7 @@
     border: 0;
     background: none;
     color: var(--accent);
-    font-size: 11px;
-    font-weight: 500;
+    font-size: var(--fs-xs);
+    font-weight: 700;
   }
 </style>

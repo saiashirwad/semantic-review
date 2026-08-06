@@ -38,7 +38,9 @@
 
 <style>
   section {
-    margin-top: 40px;
+    margin-top: 32px;
+    /* Sticky header offset for sidebar jump / scrollIntoView */
+    scroll-margin-top: calc(var(--header-h) + 12px);
   }
 
   h2 {
@@ -46,38 +48,40 @@
     align-items: center;
     gap: 10px;
     margin: 0 0 6px;
-    font-size: 16px;
-    font-weight: 600;
-    letter-spacing: -0.01em;
+    font-size: var(--fs-lg);
+    font-weight: 700;
   }
 
   .num {
     flex-shrink: 0;
-    width: 20px;
-    height: 20px;
-    border-radius: 6px;
-    background: var(--accent-soft);
-    color: var(--accent);
-    font-size: 11.5px;
-    font-weight: 600;
+    width: 24px;
+    height: 24px;
+    border: var(--border-w) solid var(--border);
+    background: var(--bg-raised);
+    color: var(--fg);
+    font-size: var(--fs-sm);
+    font-weight: 700;
     line-height: 20px;
     text-align: center;
   }
 
   .intro {
     color: var(--fg-muted);
-    font-size: 13.5px;
+    font-size: var(--fs-md);
   }
 
   .note {
-    margin: -4px 0 16px;
+    margin: 0 0 12px;
+    padding: 10px 12px;
+    border: var(--border-w) solid var(--border);
+    border-left: 4px solid var(--accent);
+    background: var(--bg-panel);
     color: var(--fg-muted);
-    font-size: 12.5px;
+    font-size: var(--fs-sm);
   }
 
   .missing {
     color: var(--fg-faint);
-    font-size: 13px;
-    font-style: italic;
+    font-size: var(--fs-sm);
   }
 </style>

@@ -175,7 +175,10 @@ export class ReviewState {
     if (!anchor) return;
     const details = anchor.closest("details");
     if (details) details.open = true;
-    anchor.scrollIntoView({ behavior: "smooth", block: "center" });
+    // Park the line near the top so the finding card can open below without
+    // covering the code it refers to (FindingPopover places relative to the row).
+    const row = anchor.closest("tr") ?? anchor;
+    row.scrollIntoView({ behavior: "instant", block: "start" });
   }
 
   openComposer(ref: string, quote: string, opts: { html?: string; anchor?: PendingComment["anchor"] } = {}) {

@@ -31,9 +31,6 @@
     const td = el?.closest?.("[data-ref]") as HTMLElement | null;
     const section = el?.closest?.("[data-ctx]") as HTMLElement | null;
     const ref = td?.dataset.ref ?? (section ? `§ ${section.dataset.ctx}` : "report");
-    // For diff selections, rebuild the quote from the touched lines' clean
-    // text (the raw DOM selection would include gutter +/− and flag markers)
-    // and carry their highlighted HTML.
     const table = td?.closest("table");
     const cells = table
       ? [...table.querySelectorAll<HTMLElement>("td[data-html]")].filter((cell) => range.intersectsNode(cell))
@@ -59,18 +56,23 @@
   .bubble {
     position: absolute;
     z-index: 30;
-    height: 26px;
+    height: 28px;
     padding: 0 12px;
-    border: 0;
-    border-radius: var(--radius-sm);
+    border: var(--border-w) solid var(--border);
     background: var(--accent);
     color: var(--accent-fg);
-    font-size: 12px;
-    font-weight: 600;
+    font-size: var(--fs-xs);
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
     box-shadow: var(--shadow-pop);
   }
 
   .bubble:hover {
     background: var(--accent-hover);
+  }
+
+  .bubble:active {
+    transform: translate(1px, 1px);
   }
 </style>

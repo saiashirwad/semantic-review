@@ -1,5 +1,6 @@
 import { createHighlighter, bundledLanguages, type Highlighter } from "shiki";
 import type { DiffFile, Hunk } from "./diff";
+import { CODE_THEME_NAME, neobrutalTheme } from "./code-theme";
 
 const LANG_BY_EXT: Record<string, string> = {
   ts: "typescript", tsx: "tsx", js: "javascript", jsx: "jsx", mjs: "javascript", cjs: "javascript",
@@ -9,6 +10,9 @@ const LANG_BY_EXT: Record<string, string> = {
   html: "html", erb: "erb", css: "css", scss: "scss", json: "json", yml: "yaml", yaml: "yaml",
   toml: "toml", md: "markdown", sql: "sql", ex: "elixir", exs: "elixir", vue: "vue", svelte: "svelte",
 };
+
+// Custom neobrutalist theme — dark code on warm paper UI (see code-theme.ts).
+export const CODE_THEME = CODE_THEME_NAME;
 
 export function langFor(path: string): string {
   const ext = path.split(".").pop()?.toLowerCase() ?? "";
@@ -31,18 +35,21 @@ function tokenStyle(token: { htmlStyle?: string | Record<string, string>; color?
 
 export async function makeHighlighter(files: DiffFile[]): Promise<Highlighter> {
   const langs = [...new Set(files.map((f) => langFor(f.path)).filter((l) => l !== "text"))];
-  return createHighlighter({ themes: ["github-light", "github-dark"], langs });
+  return createHighlighter({
+    themes: [neobrutalTheme],
+    langs,
+  });
 }
 
-// One HTML string per hunk line: dual-theme shiki token spans (dark colors via
-// the --shiki-dark CSS variable), already escaped for direct innerHTML use.
+// One HTML string per hunk line: themed token spans, already escaped for
+// direct innerHTML use.
 export function highlightHunk(hl: Highlighter, file: DiffFile, hunk: Hunk): string[] {
   const code = hunk.lines.map((l) => l.text).join("\n");
   let tokenLines: { htmlStyle?: string | Record<string, string>; color?: string; content: string }[][];
   try {
     tokenLines = hl.codeToTokens(code, {
       lang: langFor(file.path) as never,
-      themes: { light: "github-light", dark: "github-dark" },
+      theme: CODE_THEME,
     }).tokens;
   } catch {
     tokenLines = hunk.lines.map((l) => [{ content: l.text }]);

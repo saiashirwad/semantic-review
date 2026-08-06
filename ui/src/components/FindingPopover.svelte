@@ -16,37 +16,98 @@
     info: "Note",
   };
 
-  // The anchor (.flag-anchor) sits inside a hunk card with overflow:hidden,
-  // so the popover uses fixed positioning measured from the anchor to escape
-  // the card's clipping. Re-measured on scroll/resize (capture catches
-  // scrolling containers too).
+  // The anchor (.flag-anchor) sits inside a hunk with overflow:hidden, so the
+  // popover is position:fixed. Placement rules:
+  //  1. Scroll the code *row* into a safe band of the viewport.
+  //  2. Prefer opening below the row so the reviewed line stays visible above.
+  //  3. Cap max-height to remaining space so the card never covers the row.
+  //  4. Fall back above the row when there isn't room below.
   let el = $state<HTMLElement | null>(null);
-  let pos = $state<{ left: number; top: number } | null>(null);
+  let pos = $state<{ left: number; top: number; maxHeight: number } | null>(null);
+  let didInitialScroll = false;
 
-  function place() {
+  const MARGIN = 8;
+  const GAP = 12;
+  const MIN_CARD = 160;
+
+  function rowEl(anchor: Element): HTMLElement {
+    return (anchor.closest("tr") as HTMLElement | null) ?? (anchor as HTMLElement);
+  }
+
+  function place(opts: { scroll: boolean } = { scroll: false }) {
     const anchor = el?.parentElement;
     if (!anchor || !el) return;
-    const rect = anchor.getBoundingClientRect();
-    const width = Math.min(420, window.innerWidth * 0.8);
+
+    const row = rowEl(anchor);
+    const width = Math.min(420, window.innerWidth * 0.85);
+
+    let rowRect = row.getBoundingClientRect();
+    let spaceBelow = window.innerHeight - rowRect.bottom - MARGIN - GAP;
+    let spaceAbove = rowRect.top - MARGIN - GAP;
+    const openBelow = spaceBelow >= MIN_CARD || spaceBelow >= spaceAbove;
+
+    if (opts.scroll) {
+      // Put the line at the top (room below for the card) or bottom (room above).
+      row.scrollIntoView({ behavior: "instant", block: openBelow ? "start" : "end" });
+      rowRect = row.getBoundingClientRect();
+      spaceBelow = window.innerHeight - rowRect.bottom - MARGIN - GAP;
+      spaceAbove = rowRect.top - MARGIN - GAP;
+    }
+
+    const avail = openBelow
+      ? Math.max(MIN_CARD, window.innerHeight - rowRect.bottom - MARGIN - GAP)
+      : Math.max(MIN_CARD, rowRect.top - MARGIN - GAP);
+    const maxHeight = Math.min(avail, window.innerHeight - MARGIN * 2);
+
+    // Apply max-height before measuring so height reflects the cap.
+    el.style.maxHeight = `${maxHeight}px`;
     const height = el.offsetHeight;
-    // Open below the flagged line; flip above when there is no room, and
-    // clamp into the viewport either way so it never renders off-screen.
-    let top = rect.bottom + 6;
-    if (top + height > window.innerHeight - 8) top = rect.top - height - 6;
-    top = Math.max(8, Math.min(top, window.innerHeight - height - 8));
-    pos = {
-      left: Math.max(8, Math.min(rect.left, window.innerWidth - width - 8)),
-      top,
-    };
+
+    let top: number;
+    if (openBelow) {
+      top = rowRect.bottom + GAP;
+      // Never slide back up over the row if the card is taller than expected.
+      if (top + height > window.innerHeight - MARGIN) {
+        top = Math.max(rowRect.bottom + GAP, window.innerHeight - MARGIN - height);
+      }
+    } else {
+      top = rowRect.top - GAP - height;
+      if (top < MARGIN) top = MARGIN;
+      // If we'd still overlap the row, pin just above it with scrollable card.
+      if (top + height > rowRect.top - GAP) {
+        top = Math.max(MARGIN, rowRect.top - GAP - Math.min(height, spaceAbove));
+      }
+    }
+
+    // Final overlap guard: if the card still intersects the row, force below
+    // (or above) with a hard edge against the row.
+    const overlaps = top < rowRect.bottom && top + height > rowRect.top;
+    if (overlaps) {
+      if (window.innerHeight - rowRect.bottom - MARGIN - GAP >= MIN_CARD / 2) {
+        top = rowRect.bottom + GAP;
+        el.style.maxHeight = `${Math.max(120, window.innerHeight - top - MARGIN)}px`;
+      } else {
+        el.style.maxHeight = `${Math.max(120, rowRect.top - MARGIN - GAP)}px`;
+        top = Math.max(MARGIN, rowRect.top - GAP - el.offsetHeight);
+      }
+    }
+
+    const left = Math.max(MARGIN, Math.min(rowRect.left, window.innerWidth - width - MARGIN));
+    pos = { left, top, maxHeight: parseFloat(el.style.maxHeight) || maxHeight };
   }
 
   $effect(() => {
-    place();
-    window.addEventListener("scroll", place, { capture: true, passive: true });
-    window.addEventListener("resize", place);
+    // Initial open: scroll the line clear, then place. Later scroll/resize only re-place.
+    requestAnimationFrame(() => {
+      place({ scroll: !didInitialScroll });
+      didInitialScroll = true;
+    });
+    const onScrollOrResize = () => place({ scroll: false });
+    window.addEventListener("scroll", onScrollOrResize, { capture: true, passive: true });
+    window.addEventListener("resize", onScrollOrResize);
     return () => {
-      window.removeEventListener("scroll", place, { capture: true });
-      window.removeEventListener("resize", place);
+      window.removeEventListener("scroll", onScrollOrResize, { capture: true });
+      window.removeEventListener("resize", onScrollOrResize);
     };
   });
 
@@ -62,7 +123,9 @@
   role="dialog"
   aria-label={finding.title}
   bind:this={el}
-  style={pos ? `left: ${pos.left}px; top: ${pos.top}px; visibility: visible` : "visibility: hidden"}
+  style={pos
+    ? `left: ${pos.left}px; top: ${pos.top}px; max-height: ${pos.maxHeight}px; visibility: visible`
+    : "visibility: hidden"}
 >
   <div class="head">
     <span class="kind sev-{finding.severity}">{KIND[finding.severity]}</span>
@@ -90,14 +153,15 @@
   .popover {
     position: fixed;
     z-index: 30;
-    width: min(420px, 80vw);
-    max-height: calc(100vh - 16px);
+    width: min(420px, 85vw);
     overflow-y: auto;
     padding: 14px 16px;
-    border-radius: 10px;
+    border: var(--border-w) solid var(--border);
     background: var(--bg-raised);
+    /* Reset inherited light text from dark .hunk ancestors */
+    color: var(--fg);
     box-shadow: var(--shadow-pop);
-    font: var(--font-sans);
+    font-family: var(--font-ui);
     white-space: normal;
     word-break: normal;
     text-align: left;
@@ -107,79 +171,80 @@
   .head {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     margin-bottom: 10px;
   }
 
   .kind {
     padding: 2px 8px;
-    border-radius: 5px;
-    font-size: 11px;
-    font-weight: 600;
+    border: 1px solid var(--border);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
     white-space: nowrap;
   }
 
   .sev-critical {
-    background: color-mix(in srgb, var(--sev-critical) 12%, transparent);
-    color: var(--sev-critical);
+    background: var(--sev-critical);
+    color: #fff;
   }
   .sev-major {
-    background: color-mix(in srgb, var(--sev-major) 12%, transparent);
-    color: var(--sev-major);
+    background: var(--sev-major);
+    color: #fff;
   }
   .sev-minor {
-    background: color-mix(in srgb, var(--sev-minor) 14%, transparent);
-    color: var(--sev-minor);
+    background: var(--sev-minor);
+    color: #111;
   }
   .sev-info {
-    background: color-mix(in srgb, var(--sev-info) 14%, transparent);
-    color: var(--sev-info);
+    background: var(--sev-info);
+    color: #fff;
   }
 
   .ref {
     flex: 1;
     overflow: hidden;
     color: var(--fg-faint);
-    font: var(--font-mono);
-    font-size: 11px;
+    font-family: var(--font-code);
+    font-size: var(--fs-xs);
     text-overflow: ellipsis;
     white-space: nowrap;
   }
 
   .close {
-    padding: 2px;
+    padding: 0 4px;
     border: 0;
-    border-radius: 4px;
     background: none;
-    color: var(--fg-faint);
-    font-size: 12px;
-    line-height: 1;
+    color: var(--fg-muted);
+    font-size: var(--fs-sm);
+    font-weight: 700;
   }
 
   .close:hover {
-    background: var(--bg-hover);
     color: var(--fg);
+    background: var(--bg-hover);
   }
 
   h4 {
     margin: 0 0 6px;
-    font-size: 14px;
-    font-weight: 600;
-    letter-spacing: -0.01em;
+    color: var(--fg);
+    font-size: var(--fs-md);
+    font-weight: 700;
   }
 
   .rec-label {
     margin: 12px 0 4px;
     color: var(--fg-faint);
-    font-size: 10.5px;
-    font-weight: 600;
-    letter-spacing: 0.08em;
+    font-size: var(--fs-xs);
+    font-weight: 700;
+    letter-spacing: 0.06em;
     text-transform: uppercase;
   }
 
   .prose {
     color: var(--fg-muted);
-    font-size: 13px;
+    font-size: var(--fs-sm);
   }
 
   blockquote {
@@ -187,13 +252,19 @@
     padding: 6px 10px;
     overflow: auto;
     max-height: 90px;
-    border-left: 2px solid var(--accent);
-    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
-    background: var(--bg-inset);
-    font: var(--font-mono);
-    font-size: 11.5px;
-    white-space: pre-wrap;
-    word-break: break-all;
+    border-left: 3px solid var(--accent);
+    background: var(--bg-code);
+    color: var(--fg-code);
+    font-family: var(--font-code);
+    font-size: var(--fs-xs);
+    line-height: 1.5;
+    white-space: pre;
+    word-break: normal;
+    overflow-wrap: normal;
+  }
+
+  blockquote :global(span[style]) {
+    background: transparent !important;
   }
 
   .actions {
@@ -203,13 +274,16 @@
   }
 
   .actions button {
-    height: 28px;
+    height: 30px;
     padding: 0 12px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
+    border: var(--border-w) solid var(--border);
     background: var(--bg-raised);
-    font-size: 12.5px;
-    font-weight: 500;
+    color: var(--fg);
+    font-size: var(--fs-xs);
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    box-shadow: var(--shadow-btn);
   }
 
   .actions button:hover {
@@ -217,13 +291,16 @@
   }
 
   .actions .primary {
-    border-color: transparent;
     background: var(--accent);
     color: var(--accent-fg);
-    font-weight: 600;
   }
 
   .actions .primary:hover {
     background: var(--accent-hover);
+  }
+
+  .actions button:active {
+    transform: translate(1px, 1px);
+    box-shadow: none;
   }
 </style>

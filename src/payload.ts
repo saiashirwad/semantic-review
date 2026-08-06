@@ -1,6 +1,7 @@
 import { renderMermaidSVG } from "beautiful-mermaid";
 import type { AnalysisResult } from "./analysis";
 import type { DiffFile, DiffLine } from "./diff";
+import { DIAGRAM_RENDER_OPTIONS, polishDiagramSvg } from "./diagram-theme";
 import { highlightHunk, makeHighlighter } from "./highlight";
 
 // The single serializable object crossing the server/client boundary,
@@ -51,7 +52,7 @@ export interface ReviewPayload {
 function renderDiagram(source: string): string {
   if (!source.trim()) return "";
   try {
-    return renderMermaidSVG(source, { transparent: true }).replace(/\s*@import url\([^;]+;?/g, "");
+    return polishDiagramSvg(renderMermaidSVG(source, DIAGRAM_RENDER_OPTIONS));
   } catch {
     return "";
   }

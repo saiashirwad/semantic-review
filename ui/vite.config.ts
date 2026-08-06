@@ -34,6 +34,7 @@ function devServer(): Plugin {
 
 export default defineConfig({
   plugins: [svelte(), devServer()],
+  // Pixel fonts must ship inside the offline CSS bundle (no remote loads).
   build: {
     lib: {
       entry: "src/main.ts",
@@ -45,5 +46,6 @@ export default defineConfig({
     outDir: "../dist/ui",
     emptyOutDir: true,
     cssCodeSplit: false,
+    assetsInlineLimit: 100_000,
   },
 });
