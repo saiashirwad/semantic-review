@@ -115,7 +115,7 @@
         {/if}
       </div>
 
-      <CodeQuote html={review.composer.html} quote={review.composer.quote} maxHeight="120px" overflow="scroll" />
+      <CodeQuote quote={review.composer.quote} maxHeight="120px" overflow="scroll" />
 
       <label class="field">
         <span class="field-label">Your note</span>

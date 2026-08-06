@@ -29,7 +29,7 @@ const analysis: Analysis = {
 };
 
 describe("buildReviewPayload", () => {
-  test("carries files with counts and per-line html", async () => {
+  test("carries files with counts and Pierre SSR", async () => {
     const payload = await buildReviewPayload([{ backend: "test", analysis }], parseDiff(DIFF), "server");
     expect(payload.mode).toBe("server");
     expect(payload.title).toBe("Greeting rewrite");
@@ -40,14 +40,11 @@ describe("buildReviewPayload", () => {
     expect(file.dels).toBe(1);
     expect(payload.totalChangedLines).toBe(3);
     const lines = file.hunks[0].lines;
-    expect(lines.every((l) => l.html.includes("<span"))).toBe(true);
-  });
-
-  test("escapes markup in code", async () => {
-    const payload = await buildReviewPayload([{ backend: "test", analysis }], parseDiff(DIFF), "server");
-    const throwLine = payload.files[0].hunks[0].lines.find((l) => l.text.includes("no name"))!;
-    expect(throwLine.html).not.toContain("<no name>");
-    expect(throwLine.html).toContain("&lt;no name&gt;");
+    expect(lines.every((l) => typeof l.text === "string")).toBe(true);
+    expect(lines.some((l) => l.text.includes("<no name>"))).toBe(true);
+    // Syntax highlighting lives in Pierre HTML, not per-line spans
+    expect(file.hunks[0].pierre?.unified || file.pierre?.unified).toBeTruthy();
+    expect(payload.pierre?.css).toBeTruthy();
   });
 
   test("pre-renders mermaid to SVG and falls back to empty on bad source", async () => {

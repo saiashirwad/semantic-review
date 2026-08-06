@@ -78,11 +78,11 @@
   --bg-inset: #e8e2d6; /* palette.inset */
   --bg-hover: #ddd5c6;
   --bg-panel: #fff8ec; /* palette.panel */
-  --bg-code: #111111; /* palette.codeBg */
+  --bg-code: #0c0c0c; /* palette.codeBg */
   --fg: #0a0a0a; /* palette.ink */
   --fg-muted: #2e2e2e; /* palette.inkMuted */
   --fg-faint: #5c5c5c; /* palette.inkFaint */
-  --fg-code: #f2ede4; /* palette.codeFg */
+  --fg-code: #f7f1e6; /* palette.codeFg */
   --border: #0a0a0a;
   --border-soft: #0a0a0a;
   --border-w: 2px;
@@ -103,13 +103,13 @@
   --selected-soft: #c6f0dd;
   --selected-fg: #064032;
 
-  --add-bg: #0c2418; /* palette.addBg */
-  --del-bg: #2a1010; /* palette.delBg */
-  --add-fg: #3dd68c; /* palette.addFg */
-  --del-fg: #ff6b6b; /* palette.delFg */
-  /* Subtle tints so syntax token colors stay readable */
-  --add-row: #0f1f16; /* palette.addRow */
-  --del-row: #241212; /* palette.delRow */
+  --add-bg: #082016; /* palette.addBg */
+  --del-bg: #220e0e; /* palette.delBg */
+  --add-fg: #34d399; /* palette.addFg */
+  --del-fg: #fb7185; /* palette.delFg */
+  /* Quiet row washes — syntax tokens stay dominant */
+  --add-row: #0a1812; /* palette.addRow */
+  --del-row: #180e0e; /* palette.delRow */
 
   --sev-critical: #e03131; /* palette.sevCritical */
   --sev-major: #f54e00; /* palette.sevMajor */
@@ -187,14 +187,14 @@
     --action: #f5f5f5;
     --action-hover: #ffffff;
     --action-fg: #0a0a0a;
-    --selected: #3dd68c;
-    --selected-soft: #0c2418;
+    --selected: #34d399;
+    --selected-soft: #082016;
     --selected-fg: #b8f0d4;
 
-    --add-row: #0c2418;
-    --del-row: #2a1212;
-    --add-fg: #3dd68c;
-    --del-fg: #ff7a7a;
+    --add-row: #0a1812;
+    --del-row: #180e0e;
+    --add-fg: #34d399;
+    --del-fg: #fb7185;
 
     --sev-critical: #ff5c5c;
     --sev-major: #ff6a2b;
@@ -341,7 +341,7 @@ button {
   border: 1px solid var(--border);
   border-radius: 0;
   background: var(--bg-code);
-  color: #f2ede4;
+  color: var(--fg-code);
   font-family: var(--font-code);
   font-size: 0.88em;
   font-weight: 500;

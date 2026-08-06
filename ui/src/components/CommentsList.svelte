@@ -43,9 +43,9 @@
         </button>
       </header>
 
-      {#if comment.html || comment.quote}
+      {#if comment.quote}
         <div class="quote-wrap">
-          <CodeQuote html={comment.html} quote={comment.quote} maxHeight="4.5em" overflow="clip" />
+          <CodeQuote quote={comment.quote} maxHeight="4.5em" overflow="clip" />
         </div>
       {/if}
 

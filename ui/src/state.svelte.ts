@@ -16,14 +16,13 @@ export type CommentJump =
 export interface PendingComment {
   ref: string;
   quote: string;
-  html?: string; // shiki-highlighted quote, one hunk line per \n
   anchor?: { left: number; top: number }; // document coords near the source line
   /** Client-only; used to jump back to source. Not POSTed. */
   jump?: CommentJump;
 }
 
-/** Client comment: ReviewComment plus display/jump fields (never POSTed). */
-export type UiComment = ReviewComment & { html?: string; jump?: CommentJump };
+/** Client comment: ReviewComment plus jump field (never POSTed). */
+export type UiComment = ReviewComment & { jump?: CommentJump };
 
 export interface HunkRef {
   file: PayloadFile;
@@ -361,10 +360,6 @@ export class ReviewState {
     return this.lineForFinding(finding)?.text ?? "";
   }
 
-  quoteHtmlForFinding(finding: Finding): string {
-    return this.lineForFinding(finding)?.html ?? "";
-  }
-
   private lineForFinding(finding: Finding) {
     const entry = this.hunkIndex.get(finding.hunk_id);
     if (!entry || finding.line == null) return null;
@@ -412,7 +407,6 @@ export class ReviewState {
     this.comments.push({
       ref: this.refForFinding(finding),
       quote: this.quoteForFinding(finding) || undefined,
-      html: this.quoteHtmlForFinding(finding) || undefined,
       text,
       backend: this.result.backend,
       jump,
@@ -499,7 +493,6 @@ export class ReviewState {
     ref: string,
     quote: string,
     opts: {
-      html?: string;
       anchor?: PendingComment["anchor"];
       jump?: CommentJump;
     } = {},
@@ -512,7 +505,6 @@ export class ReviewState {
     this.comments.push({
       ref: this.composer.ref,
       quote: this.composer.quote || undefined,
-      html: this.composer.html,
       text: text.trim(),
       backend: this.result.backend,
       jump: this.composer.jump,
@@ -529,7 +521,7 @@ export class ReviewState {
       .sort((a, b) => a - b)
       .map((i) => ({ backend: this.payload.results[i].backend, items: this.payload.results[i].analysis.notes }))
       .filter((n) => n.items.length > 0);
-    // Strip client-only `html` before leaving the browser.
+    // Drop client-only jump before leaving the browser.
     const comments: ReviewComment[] = this.comments.map(({ ref, quote, text, backend }) => ({
       ref,
       quote,

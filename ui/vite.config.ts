@@ -2,9 +2,9 @@ import { defineConfig, type Plugin } from "vite";
 import { svelte } from "@sveltejs/vite-plugin-svelte";
 
 // Dev-only stand-ins for the CLI: /dev/payload.json builds the fixture
-// through the real payload pipeline (shiki highlighting, mermaid
-// pre-rendering), and /done logs the posted review — so the full loop works
-// from `bun run dev:ui` without running the CLI.
+// through the real payload pipeline (Pierre diffs, mermaid pre-rendering),
+// and /done logs the posted review — so the full loop works from
+// `bun run dev:ui` without running the CLI.
 function devServer(): Plugin {
   return {
     name: "semantic-review-dev-server",

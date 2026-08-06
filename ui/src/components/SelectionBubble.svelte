@@ -12,7 +12,6 @@
 
   function measureSelection(): {
     quote: string;
-    html?: string;
     ref: string;
     rect: DOMRect;
     lines: number;
@@ -55,7 +54,6 @@
       const ref = review.refForLine(hunkId, idx);
       return {
         quote: payloadLines.map((l) => l.text).join("\n"),
-        html: payloadLines.map((l) => l.html).join("\n"),
         ref,
         rect,
         lines: payloadLines.length,
@@ -131,7 +129,6 @@
     pos = null;
     sel?.removeAllRanges();
     review.openComposer(measured.ref, measured.quote, {
-      html: measured.html,
       jump: measured.jump,
       anchor: anchor
         ? { left: anchor.left, top: anchor.top }

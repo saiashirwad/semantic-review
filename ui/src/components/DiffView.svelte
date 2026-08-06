@@ -90,7 +90,6 @@
   function openComment(line: (typeof hunk.lines)[0], idx: number, e: MouseEvent) {
     const rect = (e.currentTarget as HTMLElement).closest("tr")!.getBoundingClientRect();
     review.openComposer(review.refForLine(hunk.id, idx), line.text, {
-      html: line.html,
       anchor: { left: rect.left + window.scrollX, top: rect.bottom + window.scrollY },
       jump: { kind: "line", hunkId: hunk.id, idx },
     });
@@ -138,7 +137,7 @@
       data-hunk={hunk.id}
       data-idx={idx}
     >
-      {@html line.html || "&nbsp;"}
+      {line.text || "\u00a0"}
     </td>
   {:else}
     <td class="gutter spacer"></td>
@@ -404,11 +403,11 @@
   }
 
   .c.add {
-    background: color-mix(in srgb, var(--add-fg) 9%, #111111);
+    background: color-mix(in srgb, var(--add-fg) 7%, #0c0c0c);
   }
 
   .c.del {
-    background: color-mix(in srgb, var(--del-fg) 10%, #111111);
+    background: color-mix(in srgb, var(--del-fg) 8%, #0c0c0c);
   }
 
   .c.flagged {
@@ -421,12 +420,12 @@
 
   table:not(.split) tr:has(.c.add) .gutter,
   table:not(.split) tr:has(.c.add) .c {
-    background: color-mix(in srgb, var(--add-fg) 9%, #111111);
+    background: color-mix(in srgb, var(--add-fg) 7%, #0c0c0c);
   }
 
   table:not(.split) tr:has(.c.del) .gutter,
   table:not(.split) tr:has(.c.del) .c {
-    background: color-mix(in srgb, var(--del-fg) 10%, #111111);
+    background: color-mix(in srgb, var(--del-fg) 8%, #0c0c0c);
   }
 
   table:not(.split) tr:has(.c.add) .gutter {

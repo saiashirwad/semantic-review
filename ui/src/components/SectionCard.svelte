@@ -94,7 +94,7 @@
     padding: 0.08em 0.28em;
     border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
     background: var(--bg-code);
-    color: #f2ede4;
+    color: var(--fg-code);
     font-size: 0.86em;
     font-weight: 500;
     box-shadow: none;

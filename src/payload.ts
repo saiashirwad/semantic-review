@@ -3,16 +3,14 @@ import { bindAnalysis, type AnalysisResult } from "./analysis.ts";
 import type { DiffFile, DiffLine } from "./diff.ts";
 import { summarizeChange } from "./diff.ts";
 import { DIAGRAM_RENDER_OPTIONS, polishDiagramSvg } from "./diagram-theme.ts";
-import { highlightHunk, makeHighlighter } from "./highlight.ts";
 import { renderPierreDiffs, type PierreRendered } from "./pierre-render.ts";
 
 // The single serializable object crossing the server/client boundary,
 // embedded in the HTML shell as window.__REVIEW_DATA__ and consumed by the
 // Svelte app in ui/.
 
-export type PayloadLine = DiffLine & {
-  html: string; // shiki token spans, safe for innerHTML (quotes / composer)
-};
+/** Diff line as shipped to the UI (plain text; Pierre owns syntax highlighting). */
+export type PayloadLine = DiffLine;
 
 export interface PayloadHunk {
   id: string;
@@ -101,7 +99,7 @@ export async function buildReviewPayload(
     analysis: bindAnalysis(r.analysis, files),
   }));
 
-  const [hl, pierre] = await Promise.all([makeHighlighter(files), renderPierreDiffs(files)]);
+  const pierre = await renderPierreDiffs(files);
 
   const payloadFiles: PayloadFile[] = attachPierre(
     files.map((file) => ({
@@ -110,14 +108,11 @@ export async function buildReviewPayload(
       status: file.status,
       adds: file.hunks.reduce((n, h) => n + h.lines.filter((l) => l.kind === "add").length, 0),
       dels: file.hunks.reduce((n, h) => n + h.lines.filter((l) => l.kind === "del").length, 0),
-      hunks: file.hunks.map((hunk) => {
-        const html = highlightHunk(hl, file, hunk);
-        return {
-          id: hunk.id,
-          header: hunk.header,
-          lines: hunk.lines.map((line, i) => ({ ...line, html: html[i] })),
-        };
-      }),
+      hunks: file.hunks.map((hunk) => ({
+        id: hunk.id,
+        header: hunk.header,
+        lines: hunk.lines.map((line) => ({ ...line })),
+      })),
     })),
     pierre,
   );

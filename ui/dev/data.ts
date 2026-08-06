@@ -1,6 +1,6 @@
 // Sample diff + analysis for `bun run dev:ui`. The vite dev server runs these
-// through the real buildReviewPayload (shiki highlighting, mermaid
-// pre-rendering) so the dev UI matches production output exactly.
+// through the real buildReviewPayload (Pierre diffs, mermaid pre-rendering)
+// so the dev UI matches production output exactly.
 //
 // Intentionally large: multi-file PR shape so the walkthrough, findings rail,
 // full diff, notes, and diagrams all have something to show.

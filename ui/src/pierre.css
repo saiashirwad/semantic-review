@@ -15,19 +15,22 @@
   display: block;
   overflow: auto;
   border: 0;
-  background: var(--bg-code, #111111);
-  color: var(--fg-code, #f2ede4);
+  background: var(--bg-code, #0c0c0c);
+  color: var(--fg-code, #f7f1e6);
   color-scheme: dark;
   font-family: var(--font-code);
   font-size: 13px;
-  line-height: 1.5;
+  line-height: 1.55;
+  font-weight: 450;
   /* Fallbacks if injected core CSS lags a tick behind first paint */
   --diffs-font-family: var(--font-code);
   --diffs-font-size: 13px;
-  --diffs-line-height: 1.5;
-  --diffs-bg: #111111;
-  --diffs-fg: #f2ede4;
-  --diffs-fg-number: color-mix(in srgb, #f2ede4 40%, #111111);
+  --diffs-line-height: 1.55;
+  --diffs-bg: #0c0c0c;
+  --diffs-fg: #f7f1e6;
+  --diffs-fg-number: color-mix(in srgb, #f7f1e6 38%, #0c0c0c);
+  /* Slightly brighter token rendering on dark ink */
+  -webkit-font-smoothing: antialiased;
 }
 
 .pierre-host [data-diff] {
@@ -118,15 +121,15 @@
   border-radius: 0 !important;
 }
 
-/* Line tints — quiet wash, not muddy slabs */
+/* Line tints — very quiet; syntax carries the signal */
 .pierre-host [data-line-type="change-addition"],
 .pierre-host [data-line-type*="addition"] {
-  background: color-mix(in srgb, var(--add-fg) 9%, #111111) !important;
+  background: color-mix(in srgb, var(--add-fg) 7%, #0c0c0c) !important;
 }
 
 .pierre-host [data-line-type="change-deletion"],
 .pierre-host [data-line-type*="deletion"] {
-  background: color-mix(in srgb, var(--del-fg) 10%, #111111) !important;
+  background: color-mix(in srgb, var(--del-fg) 8%, #0c0c0c) !important;
 }
 
 .pierre-host [data-line-type="context"],
@@ -135,26 +138,30 @@
 }
 
 /*
- * Word-level spans: no candy boxes / outlines.
- * Just a soft wash so changed tokens read without clutter.
+ * Word-level spans: hairline wash only — never drown token colors.
  */
 .pierre-host [data-diff-span] {
   border-radius: 0 !important;
   outline: none !important;
   box-shadow: none !important;
-  padding: 0 1px;
+  padding: 0;
   box-decoration-break: clone;
   -webkit-box-decoration-break: clone;
 }
 
 .pierre-host [data-line-type*="addition"] [data-diff-span] {
-  background: color-mix(in srgb, var(--add-fg) 16%, transparent) !important;
+  background: color-mix(in srgb, var(--add-fg) 12%, transparent) !important;
   color: inherit !important;
 }
 
 .pierre-host [data-line-type*="deletion"] [data-diff-span] {
-  background: color-mix(in srgb, var(--del-fg) 16%, transparent) !important;
+  background: color-mix(in srgb, var(--del-fg) 12%, transparent) !important;
   color: inherit !important;
+}
+
+/* Keep Shiki token colors intact (Pierre/theme inline styles win) */
+.pierre-host [data-line] span[style*="color"] {
+  font-weight: inherit;
 }
 
 /* Gutter numbers — quieter */

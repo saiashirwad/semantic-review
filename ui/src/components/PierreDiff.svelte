@@ -76,7 +76,6 @@
       return;
     }
     review.openComposer(review.refForLine(hit.hunkId, hit.idx), hit.line.text, {
-      html: hit.line.html,
       anchor: { left: rect.left + window.scrollX, top: rect.bottom + window.scrollY },
       jump: { kind: "line", hunkId: hit.hunkId, idx: hit.idx },
     });

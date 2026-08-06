@@ -17,7 +17,6 @@
   const review = getReviewState();
 
   const quote = $derived(review.quoteForFinding(finding));
-  const quoteHtml = $derived(review.quoteHtmlForFinding(finding));
   const ref = $derived(review.refForFinding(finding));
 
   const KIND: Record<Finding["severity"], string> = {
@@ -174,7 +173,7 @@
   <h4>{finding.title}</h4>
   <div class="prose"><Prose text={finding.body} /></div>
 
-  <CodeQuote html={quoteHtml || undefined} quote={quote} maxHeight="72px" />
+  <CodeQuote quote={quote} maxHeight="72px" />
 
   {#if finding.recommendation.trim()}
     <div class="rec-label">Recommendation</div>

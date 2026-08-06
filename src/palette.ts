@@ -1,6 +1,9 @@
 /**
  * Single neobrutalist palette for code highlighting, diagram accents, and UI.
  * `ui/src/app.css` :root tokens must stay in lockstep with these values.
+ *
+ * Code colors are poster-bright on pure ink — high contrast, distinct roles,
+ * readable on both add-green and del-red row washes.
  */
 export const palette = {
   // Paper UI (light)
@@ -12,12 +15,12 @@ export const palette = {
   inkMuted: "#2e2e2e",
   inkFaint: "#5c5c5c",
 
-  // Code surface (always dark — light paper UI, dark diffs)
-  codeBg: "#111111",
-  codeFg: "#f2ede4",
-  codeMuted: "#a39a8c",
-  codeFaint: "#6f6a5e",
-  codePunct: "#8f887c",
+  // Code surface — pure ink, warm paper foreground (always dark)
+  codeBg: "#0c0c0c",
+  codeFg: "#f7f1e6",
+  codeMuted: "#a8a194",
+  codeFaint: "#7a7368",
+  codePunct: "#8a8378",
   codeLine: "#5c564c",
 
   // Brand / accent
@@ -26,27 +29,35 @@ export const palette = {
   accentSoft: "#ffdcc8",
   selection: "#c45a32",
 
-  // Syntax roles (dark code on #111)
-  keyword: "#ff5e3a",
-  string: "#6fd3c0",
-  function: "#f0c040",
-  type: "#a78bfa",
-  number: "#ffab70",
-  property: "#e8d5b7",
+  /*
+   * Syntax roles — saturated, high-luminance, separated by hue:
+   *   keyword  = brand coral (control / storage)
+   *   string   = mint (not the same green as +diff)
+   *   function = gold
+   *   type     = sky (not purple — purple dies on green add-rows)
+   *   number   = peach
+   *   property = warm cream (near fg, slightly dimmer)
+   */
+  keyword: "#ff5c2b",
+  string: "#5eead4",
+  function: "#fbbf24",
+  type: "#7dd3fc",
+  number: "#fdba74",
+  property: "#e7dcc8",
   tag: "#4ade80",
   regex: "#fb7185",
-  escape: "#c4a5f0",
-  support: "#8bb4f0",
-  invalid: "#ff6b6b",
-  component: "#6fd3c0",
+  escape: "#d8b4fe",
+  support: "#93c5fd",
+  invalid: "#ff5c5c",
+  component: "#2dd4bf",
 
-  // Diff
-  addBg: "#0c2418",
-  delBg: "#2a1010",
-  addFg: "#3dd68c",
-  delFg: "#ff6b6b",
-  addRow: "#0f1f16",
-  delRow: "#241212",
+  // Diff — quiet row washes, bright markers (tokens stay on top)
+  addBg: "#082016",
+  delBg: "#220e0e",
+  addFg: "#34d399",
+  delFg: "#fb7185",
+  addRow: "#0a1812",
+  delRow: "#180e0e",
 
   // Severity
   sevCritical: "#e03131",
