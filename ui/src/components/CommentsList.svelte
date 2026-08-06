@@ -1,15 +1,36 @@
 <script lang="ts">
-  import { getReviewState } from "../state.svelte.ts";
+  import { getReviewState, type UiComment } from "../state.svelte.ts";
   import CodeQuote from "./CodeQuote.svelte";
 
   const review = getReviewState();
+
+  function onCardClick(comment: UiComment, e: MouseEvent) {
+    const t = e.target as HTMLElement;
+    if (t.closest("button.delete")) return;
+    void review.jumpToComment(comment);
+  }
+
+  function onCardKey(comment: UiComment, e: KeyboardEvent) {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      void review.jumpToComment(comment);
+    }
+  }
 </script>
 
 {#if review.comments.length === 0}
   <p class="empty">Select text or hit <span class="plus">+</span> on a line to comment.</p>
 {:else}
   {#each review.comments as comment, i (i)}
-    <article class="card">
+    <div
+      class="card"
+      class:jumpable={!!comment.jump || !!comment.ref}
+      role="button"
+      tabindex="0"
+      title="Jump to source"
+      onclick={(e) => onCardClick(comment, e)}
+      onkeydown={(e) => onCardKey(comment, e)}
+    >
       <header class="card-head">
         <span class="ref" title={comment.ref}>
           {#if review.multiTab && comment.backend}
@@ -24,12 +45,12 @@
 
       {#if comment.html || comment.quote}
         <div class="quote-wrap">
-          <CodeQuote html={comment.html} quote={comment.quote} maxHeight="96px" />
+          <CodeQuote html={comment.html} quote={comment.quote} maxHeight="4.5em" overflow="clip" />
         </div>
       {/if}
 
       <div class="text">{comment.text}</div>
-    </article>
+    </div>
   {/each}
 {/if}
 
@@ -69,6 +90,23 @@
     box-shadow: var(--shadow-card);
     box-sizing: border-box;
     overflow: hidden;
+  }
+
+  .card.jumpable {
+    cursor: pointer;
+  }
+
+  .card.jumpable:hover {
+    background: var(--bg-hover);
+  }
+
+  .card.jumpable:hover .card-head {
+    background: var(--bg-hover);
+  }
+
+  .card:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
   }
 
   .card-head {
@@ -130,6 +168,7 @@
 
   .quote-wrap {
     margin: 10px 12px 0;
+    overflow: hidden;
   }
 
   .text {

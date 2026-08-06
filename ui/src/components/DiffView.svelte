@@ -91,6 +91,7 @@
     review.openComposer(review.refForLine(hunk.id, idx), line.text, {
       html: line.html,
       anchor: { left: rect.left + window.scrollX, top: rect.bottom + window.scrollY },
+      jump: { kind: "line", hunkId: hunk.id, idx },
     });
   }
 

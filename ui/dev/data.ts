@@ -452,7 +452,7 @@ index 0000000..1111111 100644
  \`\`\`ts
 `;
 
-const anthropic: Analysis = {
+const analysis: Analysis = {
   title: "Add configurable retry with backoff across the HTTP client",
   summary:
     "Introduces a shared `withRetry` helper (exponential backoff + full jitter, per-attempt timeout, HTTP-aware retry policy), wires it into `fetchJson`/`fetchText` and `ApiClient`, and covers the happy path plus a 503 retry in tests. Config grows a `RetryPolicy` with sensible defaults.",
@@ -645,78 +645,6 @@ const anthropic: Analysis = {
   ],
 };
 
-const codex: Analysis = {
-  title: "HTTP client: shared retry helper + policy config",
-  summary:
-    "Extracts retry into `withRetry`, adds `RetryPolicy` defaults, routes `fetchJson`/`fetchText`/`ApiClient` through it, and adds focused unit tests. A few signal-composition and Response-body edge cases need attention before ship.",
-  diagram: `flowchart TB
-  ApiClient --> fetchJson
-  fetchJson --> withRetry
-  fetchText --> withRetry
-  withRetry --> backoffMs
-  withRetry --> sleep
-  resolveRetry --> withRetry`,
-  sections: [
-    {
-      heading: "Policy + helper",
-      intro: "`RetryPolicy` lives in config; the loop and jitter live in `retry.ts`. Clean split.",
-      diagram: "",
-      snippets: [
-        { hunk_id: "h2", from: 14, to: 28, note: "Defaults are conservative: 3 tries, 10s timeout" },
-        { hunk_id: "h1", from: 34, to: 55, note: "Per-try AbortController + timer" },
-      ],
-    },
-    {
-      heading: "Call sites",
-      intro: "Both JSON and text helpers share one path. Client keeps an attempt log for diagnostics.",
-      diagram: "",
-      snippets: [
-        { hunk_id: "h3", from: 12, to: 30, note: "" },
-        { hunk_id: "h4", from: 28, to: 45, note: "" },
-      ],
-    },
-    {
-      heading: "Coverage",
-      intro: "Predicate, exhaustion, and a flaky 503 path are tested. Abort composition is not.",
-      diagram: "",
-      snippets: [
-        { hunk_id: "h6", from: 30, to: 50, note: "" },
-        { hunk_id: "h7", from: 1, to: 30, note: "" },
-      ],
-    },
-  ],
-  findings: [
-    {
-      title: "Timeout signal discarded when init.signal is set",
-      severity: "critical",
-      hunk_id: "h3",
-      line: 18,
-      body: "Same signal-composition bug: timeout only applies when the caller did not pass a signal.",
-      recommendation: "Use AbortSignal.any or manual linkage.",
-    },
-    {
-      title: "Unread Response on HTTP retry",
-      severity: "major",
-      hunk_id: "h1",
-      line: 50,
-      body: "Retryable Responses are abandoned without cancelling the body stream.",
-      recommendation: "Cancel the body before continue.",
-    },
-    {
-      title: "Deprecated getJson added in the same PR",
-      severity: "minor",
-      hunk_id: "h5",
-      line: 1,
-      body: "Exporting a deprecated alias on day one is unnecessary surface area.",
-      recommendation: "Remove until needed.",
-    },
-  ],
-  notes: [
-    "Consider exporting a small `createFetcher(config)` so call sites do not thread config through every helper.",
-  ],
-};
-
 export const ANALYSES: { backend: string; analysis: Analysis }[] = [
-  { backend: "anthropic", analysis: anthropic },
-  { backend: "codex", analysis: codex },
+  { backend: "analysis", analysis },
 ];

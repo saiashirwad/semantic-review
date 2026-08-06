@@ -8,15 +8,22 @@ export const SEVERITY_ORDER = ["critical", "major", "minor", "info"] as const;
 
 export type FindingStatus = "resolved" | "sent";
 
+/** Where to scroll when the reviewer re-opens a comment from the rail. */
+export type CommentJump =
+  | { kind: "line"; hunkId: string; idx: number }
+  | { kind: "ctx"; ctx: string };
+
 export interface PendingComment {
   ref: string;
   quote: string;
   html?: string; // shiki-highlighted quote, one hunk line per \n
   anchor?: { left: number; top: number }; // document coords near the source line
+  /** Client-only; used to jump back to source. Not POSTed. */
+  jump?: CommentJump;
 }
 
-/** Client comment: ReviewComment plus optional display HTML (never POSTed). */
-export type UiComment = ReviewComment & { html?: string };
+/** Client comment: ReviewComment plus display/jump fields (never POSTed). */
+export type UiComment = ReviewComment & { html?: string; jump?: CommentJump };
 
 export interface HunkRef {
   file: PayloadFile;
@@ -67,11 +74,149 @@ export class ReviewState {
   finished = $state(false);
   copyError = $state("");
 
+  /** Viewport is below the Wide 3-col floor (see App.svelte / ProgressHeader). */
+  narrow = $state(
+    typeof window !== "undefined" ? window.matchMedia("(max-width: 1119px)").matches : false,
+  );
+  /**
+   * Three markable surfaces (header chips):
+   * - Walk: narrative TOC (left)
+   * - Diff: file checklist to mark viewed (left, XOR walk)
+   * - Review: findings + comments (right)
+   */
+  walkOpen = $state(false);
+  /** File checklist panel — separate from walk (not a walk step). */
+  diffOpen = $state(false);
+  reviewOpen = $state(
+    typeof window !== "undefined" ? !window.matchMedia("(max-width: 1119px)").matches : true,
+  );
+
   constructor(payload: ReviewPayload) {
     this.payload = payload;
     this.hunkIndex = new Map();
     for (const file of payload.files) {
       for (const hunk of file.hunks) this.hunkIndex.set(hunk.id, { file, hunk });
+    }
+    if (this.narrow) {
+      this.walkOpen = false;
+      this.diffOpen = false;
+      this.reviewOpen = false;
+    }
+  }
+
+  /** Left dock shows Walk or Diff (not both). */
+  get leftOpen() {
+    return this.walkOpen || this.diffOpen;
+  }
+
+  /** Overlay drawer + scrim active (narrow only). */
+  get drawerOpen() {
+    return this.narrow && (this.walkOpen || this.diffOpen || this.reviewOpen);
+  }
+
+  toggleWalk() {
+    if (this.narrow) {
+      if (this.walkOpen) {
+        this.walkOpen = false;
+        return;
+      }
+      this.walkOpen = true;
+      this.diffOpen = false;
+      this.reviewOpen = false;
+      return;
+    }
+    // Wide: Walk XOR Diff on the left track
+    if (this.walkOpen) {
+      this.walkOpen = false;
+      return;
+    }
+    this.walkOpen = true;
+    this.diffOpen = false;
+  }
+
+  toggleDiff() {
+    if (this.narrow) {
+      if (this.diffOpen) {
+        this.diffOpen = false;
+        return;
+      }
+      this.diffOpen = true;
+      this.walkOpen = false;
+      this.reviewOpen = false;
+      return;
+    }
+    if (this.diffOpen) {
+      this.diffOpen = false;
+      return;
+    }
+    this.diffOpen = true;
+    this.walkOpen = false;
+  }
+
+  toggleReview() {
+    if (this.narrow) {
+      if (this.reviewOpen) {
+        this.reviewOpen = false;
+        return;
+      }
+      this.reviewOpen = true;
+      this.walkOpen = false;
+      this.diffOpen = false;
+      return;
+    }
+    this.reviewOpen = !this.reviewOpen;
+  }
+
+  closeDrawers() {
+    if (!this.narrow) return;
+    this.walkOpen = false;
+    this.diffOpen = false;
+    this.reviewOpen = false;
+  }
+
+  tuckWalk() {
+    this.walkOpen = false;
+  }
+
+  tuckDiff() {
+    this.diffOpen = false;
+  }
+
+  tuckReview() {
+    this.reviewOpen = false;
+  }
+
+  /** Open Diff panel and scroll main to a file's full-diff details. */
+  async jumpToFile(path: string) {
+    this.closeDrawers();
+    // On wide, surface the Diff checklist too so mark-viewed is one glance away.
+    if (!this.narrow) {
+      this.diffOpen = true;
+      this.walkOpen = false;
+    }
+    await tick();
+    const target = `Full diff: ${path}`;
+    const details = [...document.querySelectorAll("details")].find(
+      (d) => d.getAttribute("data-ctx") === target,
+    ) as HTMLDetailsElement | undefined;
+    if (details) details.open = true;
+    (details ?? document.getElementById("full-diff"))?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  }
+
+  setNarrow(narrow: boolean) {
+    if (narrow === this.narrow) return;
+    this.narrow = narrow;
+    if (narrow) {
+      this.walkOpen = false;
+      this.diffOpen = false;
+      this.reviewOpen = false;
+    } else {
+      this.walkOpen = false;
+      this.diffOpen = false;
+      this.reviewOpen = true;
     }
   }
 
@@ -229,18 +374,32 @@ export class ReviewState {
     const text =
       `[finding — ${finding.severity}] ${finding.title}\n${finding.body}` +
       (finding.recommendation.trim() ? `\nRecommendation: ${finding.recommendation}` : "");
+    const entry = this.hunkIndex.get(finding.hunk_id);
+    let jump: CommentJump | undefined;
+    if (entry) {
+      const lineNo = finding.line;
+      const idx =
+        lineNo == null
+          ? 0
+          : entry.hunk.lines.findIndex((l) => (lineNo < 0 ? l.oldNo === -lineNo : l.newNo === lineNo));
+      if (idx >= 0) jump = { kind: "line", hunkId: finding.hunk_id, idx };
+    }
     this.comments.push({
       ref: this.refForFinding(finding),
       quote: this.quoteForFinding(finding) || undefined,
       html: this.quoteHtmlForFinding(finding) || undefined,
       text,
       backend: this.result.backend,
+      jump,
     });
     this.findingStatus.set(key, "sent");
     if (this.openFinding === key) this.openFinding = null;
   }
 
   async jumpToFinding(key: string) {
+    // On narrow, close overlay drawers so the line isn't covered.
+    // On wide, keep docked rails — jump shouldn't tuck the review list.
+    this.closeDrawers();
     this.openFinding = key;
     await tick();
     const entry = this.sortedFindings.find((e) => e.key === key);
@@ -256,7 +415,70 @@ export class ReviewState {
     row.scrollIntoView({ behavior: "instant", block: "center" });
   }
 
-  openComposer(ref: string, quote: string, opts: { html?: string; anchor?: PendingComment["anchor"] } = {}) {
+  /** Scroll the main column to a saved comment's source (line or section). */
+  async jumpToComment(comment: UiComment) {
+    this.closeDrawers();
+    await tick();
+
+    let target: Element | null = null;
+    if (comment.jump?.kind === "line") {
+      const { hunkId, idx } = comment.jump;
+      target = document.querySelector(
+        `td[data-hunk="${CSS.escape(hunkId)}"][data-idx="${idx}"]`,
+      );
+    } else if (comment.jump?.kind === "ctx") {
+      target = document.querySelector(`[data-ctx="${CSS.escape(comment.jump.ctx)}"]`);
+    } else {
+      // Fallback for older in-session comments: path:line or § heading
+      target = this.resolveRefTarget(comment.ref);
+    }
+    if (!target) return;
+
+    const details = target.closest("details");
+    if (details) details.open = true;
+    const row = target.closest("tr") ?? target;
+    row.scrollIntoView({ behavior: "smooth", block: "center" });
+    row.classList.add("jump-flash");
+    window.setTimeout(() => row.classList.remove("jump-flash"), 900);
+  }
+
+  /** Best-effort DOM target from a display ref string. */
+  private resolveRefTarget(ref: string): Element | null {
+    if (ref.startsWith("§ ")) {
+      const ctx = ref.slice(2);
+      return document.querySelector(`[data-ctx="${CSS.escape(ctx)}"]`);
+    }
+    // path:line or path:line (old)
+    const m = ref.match(/^(.+):(\d+)(?:\s*\(old\))?$/);
+    if (!m) return null;
+    const path = m[1];
+    const lineNo = Number(m[2]);
+    const old = ref.includes("(old)");
+    for (const file of this.payload.files) {
+      if (file.path !== path) continue;
+      for (const hunk of file.hunks) {
+        for (let idx = 0; idx < hunk.lines.length; idx++) {
+          const l = hunk.lines[idx];
+          if (old ? l.oldNo === lineNo : l.newNo === lineNo) {
+            return document.querySelector(
+              `td[data-hunk="${CSS.escape(hunk.id)}"][data-idx="${idx}"]`,
+            );
+          }
+        }
+      }
+    }
+    return null;
+  }
+
+  openComposer(
+    ref: string,
+    quote: string,
+    opts: {
+      html?: string;
+      anchor?: PendingComment["anchor"];
+      jump?: CommentJump;
+    } = {},
+  ) {
     this.composer = { ref, quote, ...opts };
   }
 
@@ -268,6 +490,7 @@ export class ReviewState {
       html: this.composer.html,
       text: text.trim(),
       backend: this.result.backend,
+      jump: this.composer.jump,
     });
     this.composer = null;
   }

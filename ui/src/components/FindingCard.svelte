@@ -80,8 +80,11 @@
   }
 
   .title {
-    display: block;
+    display: -webkit-box;
     overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
     font-size: var(--fs-sm);
     font-weight: 600;
     line-height: 1.35;

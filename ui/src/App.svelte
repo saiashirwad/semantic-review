@@ -1,8 +1,10 @@
 <script lang="ts">
+  import { onMount } from "svelte";
   import type { ReviewPayload } from "../../src/payload.ts";
   import { ReviewState, provideReviewState } from "./state.svelte.ts";
   import ProgressHeader from "./components/ProgressHeader.svelte";
   import Sidebar from "./components/Sidebar.svelte";
+  import FilesRail from "./components/FilesRail.svelte";
   import SectionCard from "./components/SectionCard.svelte";
   import FullDiff from "./components/FullDiff.svelte";
   import BugsRail from "./components/BugsRail.svelte";
@@ -27,14 +29,54 @@
       ? review.sortedFindings.find(({ key }) => key === review.openFinding) ?? null
       : null,
   );
+
+  onMount(() => {
+    const mq = window.matchMedia("(max-width: 1119px)");
+    const sync = () => review.setNarrow(mq.matches);
+    sync();
+    mq.addEventListener("change", sync);
+
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      // Esc stack: composer → finding popover → drawer (composer/popover handle themselves when focused)
+      if (review.composer || review.openFinding) return;
+      if (review.drawerOpen) {
+        review.closeDrawers();
+        e.preventDefault();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+
+    return () => {
+      mq.removeEventListener("change", sync);
+      window.removeEventListener("keydown", onKey);
+    };
+  });
+
+  // Lock page scroll while a narrow drawer is open.
+  $effect(() => {
+    if (!review.drawerOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  });
 </script>
 
 {#if review.finished}
   <Finished />
 {:else}
   <ProgressHeader />
-  <div class="layout">
+  <div
+    class="layout"
+    class:narrow={review.narrow}
+    class:no-left={!review.leftOpen}
+    class:no-review={!review.reviewOpen}
+    class:drawer-open={review.drawerOpen}
+  >
     <Sidebar />
+    <FilesRail />
     <main>
       <div class="tldr" data-ctx="TL;DR">
         <div class="tldr-head">
@@ -52,6 +94,14 @@
     </main>
     <BugsRail />
   </div>
+  {#if review.drawerOpen}
+    <button
+      type="button"
+      class="scrim"
+      aria-label="Close panel"
+      onclick={() => review.closeDrawers()}
+    ></button>
+  {/if}
   <SelectionBubble />
   <CommentComposer />
   {#if openFindingEntry}
@@ -68,12 +118,25 @@
 <style>
   .layout {
     display: grid;
-    grid-template-columns: 240px minmax(0, 1fr) minmax(340px, 420px);
+    /* Left = Walk XOR Files (~160); center reading; right Review */
+    grid-template-columns: 160px minmax(0, 1fr) minmax(280px, 320px);
     align-items: start;
-    gap: 0 12px;
+    gap: 0 10px;
     max-width: 1680px;
     margin: 0 auto;
     width: 100%;
+  }
+
+  /* Wide: tuck left and/or right — main expands */
+  .layout.no-left:not(.narrow) {
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 320px);
+  }
+  .layout.no-review:not(.narrow) {
+    grid-template-columns: 160px minmax(0, 1fr);
+  }
+  .layout.no-left.no-review:not(.narrow),
+  .layout.narrow {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   main {
@@ -136,6 +199,22 @@
     margin-top: var(--space-5);
   }
 
+  /* Below sticky header so Walk / Review / Done stay usable while a drawer is open */
+  .scrim {
+    position: fixed;
+    top: var(--header-h);
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 25;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: color-mix(in srgb, var(--fg) 35%, transparent);
+    cursor: pointer;
+  }
+
   .copy-error {
     position: fixed;
     left: 50%;
@@ -163,21 +242,9 @@
     font-weight: 700;
   }
 
-  @media (max-width: 1100px) {
-    .layout {
-      grid-template-columns: minmax(0, 1fr) minmax(300px, 380px);
-    }
-    .layout > :global(nav.sidebar) {
-      display: none;
-    }
-  }
-
-  @media (max-width: 800px) {
-    .layout {
-      display: block;
-    }
+  @media (max-width: 720px) {
     main {
-      padding: 14px 12px 64px;
+      padding: 12px 10px 64px;
     }
   }
 </style>

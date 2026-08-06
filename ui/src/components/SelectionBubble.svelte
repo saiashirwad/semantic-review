@@ -16,6 +16,7 @@
     ref: string;
     rect: DOMRect;
     lines: number;
+    jump?: { kind: "line"; hunkId: string; idx: number } | { kind: "ctx"; ctx: string };
   } | null {
     const sel = window.getSelection();
     if (!sel || sel.isCollapsed || !sel.toString().trim()) return null;
@@ -44,25 +45,45 @@
         .filter((l): l is NonNullable<typeof l> => l != null);
       if (payloadLines.length === 0) return null;
       const first = cells[0];
-      const ref = review.refForLine(first.dataset.hunk!, Number(first.dataset.idx));
+      const hunkId = first.dataset.hunk!;
+      const idx = Number(first.dataset.idx);
+      const ref = review.refForLine(hunkId, idx);
       return {
         quote: payloadLines.map((l) => l.text).join("\n"),
         html: payloadLines.map((l) => l.html).join("\n"),
         ref,
         rect,
         lines: payloadLines.length,
+        jump: { kind: "line", hunkId, idx },
       };
     }
 
-    const ref = td
-      ? review.refForLine(td.dataset.hunk!, Number(td.dataset.idx))
-      : section
-        ? `§ ${section.dataset.ctx}`
-        : "report";
+    if (td) {
+      const hunkId = td.dataset.hunk!;
+      const idx = Number(td.dataset.idx);
+      return {
+        quote: sel.toString().trim(),
+        ref: review.refForLine(hunkId, idx),
+        rect,
+        lines: Math.max(1, sel.toString().trim().split("\n").filter((l) => l.length > 0).length),
+        jump: { kind: "line", hunkId, idx },
+      };
+    }
+
     const quote = sel.toString().trim();
+    if (section?.dataset.ctx) {
+      return {
+        quote,
+        ref: `§ ${section.dataset.ctx}`,
+        rect,
+        lines: Math.max(1, quote.split("\n").filter((l) => l.length > 0).length),
+        jump: { kind: "ctx", ctx: section.dataset.ctx },
+      };
+    }
+
     return {
       quote,
-      ref,
+      ref: "report",
       rect,
       lines: Math.max(1, quote.split("\n").filter((l) => l.length > 0).length),
     };
@@ -106,6 +127,7 @@
     sel?.removeAllRanges();
     review.openComposer(measured.ref, measured.quote, {
       html: measured.html,
+      jump: measured.jump,
       anchor: anchor
         ? { left: anchor.left, top: anchor.top }
         : {

@@ -28,7 +28,7 @@
   };
 
   let el = $state<HTMLElement | null>(null);
-  let pos = $state<{ left: number; top: number; maxHeight: number } | null>(null);
+  let pos = $state<{ left: number; top: number; maxHeight: number; width: number } | null>(null);
   let ready = $state(false);
   /** After a manual drag, stop auto-repositioning / auto-closing on scroll. */
   let userDragged = $state(false);
@@ -71,8 +71,10 @@
       return;
     }
 
-    // Measure with a provisional max-height so scrollHeight is meaningful
-    el.style.width = `${Math.min(400, window.innerWidth - POPOVER_EDGE * 2)}px`;
+    // Provisional size for measure — must also live in `pos` so the style
+    // binding doesn't wipe width on the next drag/pos update.
+    const provisionalW = Math.min(400, window.innerWidth - POPOVER_EDGE * 2);
+    el.style.width = `${provisionalW}px`;
     el.style.maxHeight = `${window.innerHeight - headerH - POPOVER_EDGE * 2}px`;
     void el.offsetHeight;
 
@@ -84,9 +86,12 @@
       headerH,
     });
 
-    el.style.width = `${placed.width}px`;
-    el.style.maxHeight = `${placed.maxHeight}px`;
-    pos = { left: placed.left, top: placed.top, maxHeight: placed.maxHeight };
+    pos = {
+      left: placed.left,
+      top: placed.top,
+      maxHeight: placed.maxHeight,
+      width: placed.width,
+    };
     ready = true;
   }
 
@@ -121,14 +126,16 @@
 
   function onDragStart(e: PointerEvent) {
     if (!pos || !el) return;
-    const w = el.offsetWidth;
+    const w = pos.width;
     const h = el.offsetHeight;
+    const maxHeight = pos.maxHeight;
+    const width = pos.width;
     startPopoverDrag(
       e,
       pos,
       (p) => {
         userDragged = true;
-        pos = { ...p, maxHeight: pos?.maxHeight ?? 400 };
+        pos = { left: p.left, top: p.top, maxHeight, width };
       },
       { mode: "fixed", width: w, height: h },
     );
@@ -138,8 +145,12 @@
     if (e.key === "Escape") review.openFinding = null;
   }
 
+  // Width must be in this string — otherwise drag/pos updates replace `style`
+  // and drop the width set during place(), and the card expands to content.
   const style = $derived(
-    pos ? `position:fixed;left:${pos.left}px;top:${pos.top}px;max-height:${pos.maxHeight}px;z-index:50` : "position:fixed;z-index:50",
+    pos
+      ? `position:fixed;left:${pos.left}px;top:${pos.top}px;width:${pos.width}px;max-height:${pos.maxHeight}px;z-index:50`
+      : "position:fixed;z-index:50",
   );
 </script>
 

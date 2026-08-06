@@ -7,7 +7,13 @@
 </script>
 
 <section id="full-diff" data-ctx="Full diff">
-  <h2><span class="num">{review.analysis.sections.length + 1}</span>Full diff</h2>
+  <h2>
+    <span class="kicker">Files</span>
+    Full diff
+    <span class="progress" title="Files marked viewed">
+      <b>{review.viewedFileCount}</b>/{review.payload.files.length}
+    </span>
+  </h2>
   {#each review.payload.files as file (file.path)}
     <details data-ctx="Full diff: {file.path}">
       <summary>
@@ -52,17 +58,31 @@
     font-weight: 700;
   }
 
-  .num {
+  .kicker {
     flex-shrink: 0;
-    width: 24px;
-    height: 24px;
+    padding: 2px 8px;
     border: var(--border-w) solid var(--border);
-    background: var(--bg-raised);
-    color: var(--fg);
-    font-size: var(--fs-sm);
+    background: var(--bg-panel);
+    color: var(--fg-muted);
+    font-size: 10px;
     font-weight: 700;
-    line-height: 20px;
-    text-align: center;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    line-height: 1.2;
+  }
+
+  .progress {
+    margin-left: auto;
+    color: var(--fg-faint);
+    font-family: var(--font-code);
+    font-size: var(--fs-xs);
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+  }
+
+  .progress b {
+    color: var(--fg);
+    font-weight: 700;
   }
 
   /* One card per file: summary + hunks share a single border/shadow */

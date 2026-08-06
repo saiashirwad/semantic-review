@@ -12,8 +12,13 @@
   /** Once the user drags, we stop re-deriving position from the anchor. */
   let dragPos = $state<Point | null>(null);
 
-  const WIDTH = 440;
+  const MAX_WIDTH = 440;
+  const EDGE = 8;
   const EST_HEIGHT = 280;
+
+  function panelWidth() {
+    return Math.min(MAX_WIDTH, document.documentElement.clientWidth - EDGE * 2);
+  }
 
   const lineCount = $derived.by(() => {
     const q = review.composer?.quote ?? "";
@@ -22,25 +27,36 @@
   });
 
   const basePos = $derived.by((): Point => {
+    const width = panelWidth();
+    const height = el?.offsetHeight ?? EST_HEIGHT;
+    const viewW = document.documentElement.clientWidth;
+    const viewTop = window.scrollY;
+    const viewBottom = viewTop + window.innerHeight;
+    const headerH = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--header-h")) || 48;
+
     const anchor = review.composer?.anchor;
     if (!anchor) {
       return {
-        left: window.scrollX + document.documentElement.clientWidth - WIDTH - 24,
-        top: window.scrollY + window.innerHeight - EST_HEIGHT - 20,
+        left: window.scrollX + viewW - width - EDGE * 2,
+        top: Math.max(viewTop + headerH + EDGE, viewBottom - height - EDGE * 2),
       };
     }
-    const left = Math.max(8, Math.min(anchor.left, document.documentElement.clientWidth - WIDTH - 8));
-    const height = el?.offsetHeight ?? EST_HEIGHT;
-    const viewportBottom = window.scrollY + window.innerHeight;
-    let top = anchor.top + 8;
-    if (top + height > viewportBottom - 8) top = anchor.top - height - 12;
-    top = Math.max(window.scrollY + 8, top);
+
+    const left = Math.max(
+      window.scrollX + EDGE,
+      Math.min(anchor.left, window.scrollX + viewW - width - EDGE),
+    );
+    let top = anchor.top + EDGE;
+    if (top + height > viewBottom - EDGE) top = anchor.top - height - 12;
+    // Prefer staying fully on-screen; pin near bottom of viewport if still tall.
+    if (top + height > viewBottom - EDGE) top = viewBottom - height - EDGE;
+    top = Math.max(viewTop + headerH + EDGE, top);
     return { left, top };
   });
 
   const pos = $derived(dragPos ?? basePos);
   const style = $derived(
-    `position:absolute;left:${pos.left}px;top:${pos.top}px;width:440px;max-width:calc(100vw - 24px);z-index:40`,
+    `position:absolute;left:${pos.left}px;top:${pos.top}px;width:${panelWidth()}px;max-width:calc(100vw - ${EDGE * 2}px);z-index:40`,
   );
 
   $effect(() => {
@@ -55,7 +71,7 @@
 
   function onDragStart(e: PointerEvent) {
     const h = el?.offsetHeight ?? EST_HEIGHT;
-    const w = el?.offsetWidth ?? WIDTH;
+    const w = el?.offsetWidth ?? panelWidth();
     startPopoverDrag(e, pos, (p) => (dragPos = p), {
       mode: "absolute",
       width: w,
@@ -99,7 +115,7 @@
         {/if}
       </div>
 
-      <CodeQuote html={review.composer.html} quote={review.composer.quote} maxHeight="120px" />
+      <CodeQuote html={review.composer.html} quote={review.composer.quote} maxHeight="120px" overflow="scroll" />
 
       <label class="field">
         <span class="field-label">Your note</span>
