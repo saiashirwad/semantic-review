@@ -456,24 +456,17 @@ const anthropic: Analysis = {
   title: "Add configurable retry with backoff across the HTTP client",
   summary:
     "Introduces a shared `withRetry` helper (exponential backoff + full jitter, per-attempt timeout, HTTP-aware retry policy), wires it into `fetchJson`/`fetchText` and `ApiClient`, and covers the happy path plus a 503 retry in tests. Config grows a `RetryPolicy` with sensible defaults.",
+  // Flat layered TB — no subgraphs. Clusters force empty panels and
+  // route edges through title bars (looked broken with arrowheads).
   diagram: `flowchart TB
-  subgraph public [Public API]
-    fetchJson
-    fetchText
-    ApiClient
-  end
-  subgraph core [Retry core]
-    withRetry
-    backoffMs
-    defaultShouldRetry
-  end
+  ApiClient --> fetchJson
+  ApiClient --> fetchText
   fetchJson --> withRetry
   fetchText --> withRetry
-  ApiClient --> fetchJson
+  resolveRetry --> withRetry
   withRetry --> backoffMs
   withRetry --> defaultShouldRetry
-  withRetry --> fetch
-  config[resolveRetry / DEFAULT_RETRY] --> withRetry`,
+  withRetry --> fetch`,
   sections: [
     {
       heading: "New retry primitive",
@@ -656,13 +649,13 @@ const codex: Analysis = {
   title: "HTTP client: shared retry helper + policy config",
   summary:
     "Extracts retry into `withRetry`, adds `RetryPolicy` defaults, routes `fetchJson`/`fetchText`/`ApiClient` through it, and adds focused unit tests. A few signal-composition and Response-body edge cases need attention before ship.",
-  diagram: `flowchart LR
+  diagram: `flowchart TB
   ApiClient --> fetchJson
   fetchJson --> withRetry
   fetchText --> withRetry
   withRetry --> backoffMs
   withRetry --> sleep
-  config --> withRetry`,
+  resolveRetry --> withRetry`,
   sections: [
     {
       heading: "Policy + helper",

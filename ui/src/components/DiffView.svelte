@@ -8,11 +8,18 @@
     file: PayloadFile;
     hunk: PayloadHunk;
     range?: { from: number; to: number } | null;
+    /** Per-hunk “Viewed” control (full-diff progress). */
     viewable?: boolean;
+    /** Nested under a file chrome (Full diff) — don’t repeat path / file Viewed. */
+    embedded?: boolean;
   }
 
-  const { file, hunk, range = null, viewable = false }: Props = $props();
+  const { file, hunk, range = null, viewable = false, embedded = false }: Props = $props();
   const review = getReviewState();
+
+  // In Full diff the file row already has Viewed; only offer per-hunk checks
+  // when a file is split across multiple hunks.
+  const showHunkViewed = $derived(viewable && (!embedded || file.hunks.length > 1));
 
   let expanded = $state(false);
 
@@ -63,6 +70,19 @@
     return line.newNo != null ? `${file.path}:${line.newNo}` : `${file.path}:${line.oldNo} (old)`;
   }
 
+  /** One number column: new line for adds/context, old line for dels. */
+  function lineNo(line: PayloadLine, side: "left" | "right" | "unified"): string | number {
+    if (side === "left") return line.oldNo ?? "";
+    if (side === "right") return line.newNo ?? "";
+    // unified
+    if (line.kind === "del") return line.oldNo ?? "";
+    return line.newNo ?? line.oldNo ?? "";
+  }
+
+  function sign(line: PayloadLine): string {
+    return line.kind === "add" ? "+" : line.kind === "del" ? "−" : " ";
+  }
+
   function flagsFor(idx: number) {
     return review.findingsAt(hunk.id, idx).filter(({ key }) => !review.resolvedFindings.has(key));
   }
@@ -98,20 +118,16 @@
   {/if}
 {/snippet}
 
-{#snippet act(entry: { line: PayloadLine; idx: number } | null)}
-  <td class="act">
-    {#if entry}
-      <button class="lc" title="Comment on this line" onclick={(e) => openComment(entry.line, e)}>+</button>
-      {@render gutterFlag(entry.idx)}
-    {/if}
-  </td>
-{/snippet}
-
-{#snippet cell(entry: { line: PayloadLine; idx: number } | null, side: "left" | "right")}
+{#snippet rowMeta(entry: { line: PayloadLine; idx: number } | null, side: "left" | "right" | "unified")}
   {#if entry}
     {@const { line, idx } = entry}
-    <td class="g">{side === "right" ? (line.newNo ?? "") : (line.oldNo ?? line.newNo ?? "")}</td>
-    <td class="m {line.kind}">{line.kind === "add" ? "+" : line.kind === "del" ? "−" : ""}</td>
+    <!-- Combined gutter: line number + sign; comment on hover -->
+    <td class="gutter {line.kind}">
+      <button class="lc" title="Comment on this line" onclick={(e) => openComment(line, e)}>+</button>
+      {@render gutterFlag(idx)}
+      <span class="num">{lineNo(line, side)}</span>
+      <span class="sign">{sign(line)}</span>
+    </td>
     <td
       class="c {line.kind}"
       class:flagged={flagsFor(idx).length > 0}
@@ -122,17 +138,18 @@
       {@html line.html || "&nbsp;"}
     </td>
   {:else}
-    <td class="g"></td>
-    <td class="m"></td>
+    <td class="gutter spacer"></td>
     <td class="c spacer"></td>
   {/if}
 {/snippet}
 
-<div class="hunk" id="hunk-{hunk.id}">
+<div class="hunk" class:embedded id="hunk-{hunk.id}">
   <div class="head">
-    <span class="path">{file.path}</span>
+    {#if !embedded}
+      <span class="path">{file.path}</span>
+    {/if}
     {#if elided}<span class="tag">excerpt</span>{/if}
-    <span class="header">{hunk.header}</span>
+    <span class="header" class:solo={embedded}>{hunk.header}</span>
     <span class="spacer-flex"></span>
     {#if hunkFlags.length > 0}
       <span class="flag-anchor" data-finding-line={hunkFlags[0].key}>
@@ -150,7 +167,7 @@
         {/each}
       </span>
     {/if}
-    {#if viewable}
+    {#if showHunkViewed}
       <span class="viewed">
         <Check
           checked={review.viewedHunks.has(hunk.id)}
@@ -169,11 +186,8 @@
     <table class="diff">
       <tbody>
         {#each excerptIndices as idx (idx)}
-          {@const line = hunk.lines[idx]}
           <tr>
-            {@render act({ line, idx })}
-            <td class="g">{line.oldNo ?? ""}</td>
-            {@render cell({ line, idx }, "right")}
+            {@render rowMeta({ line: hunk.lines[idx], idx }, "unified")}
           </tr>
         {/each}
       </tbody>
@@ -183,9 +197,8 @@
       <tbody>
         {#each splitRows as row, i (i)}
           <tr>
-            {@render act(row.left ?? row.right)}
-            {@render cell(row.left, "left")}
-            {@render cell(row.right, "right")}
+            {@render rowMeta(row.left, "left")}
+            {@render rowMeta(row.right, "right")}
           </tr>
         {/each}
       </tbody>
@@ -209,6 +222,14 @@
     font-family: var(--font-code);
   }
 
+  /* Nested under Full diff file row — no second card shadow / path chrome */
+  .hunk.embedded {
+    margin: 0;
+    border: 0;
+    border-top: 1px solid color-mix(in srgb, var(--fg-code) 14%, transparent);
+    box-shadow: none;
+  }
+
   .head {
     display: flex;
     align-items: center;
@@ -219,6 +240,13 @@
     background: #0a0a0a;
     font-family: var(--font-code);
     font-size: var(--fs-sm);
+  }
+
+  .hunk.embedded .head {
+    min-height: 28px;
+    padding: 4px 12px;
+    background: #0e0e0e;
+    border-bottom-color: color-mix(in srgb, var(--fg-code) 10%, transparent);
   }
 
   .path {
@@ -242,6 +270,11 @@
     color: color-mix(in srgb, var(--fg-code) 50%, transparent);
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  .header.solo {
+    color: color-mix(in srgb, var(--fg-code) 62%, transparent);
+    font-weight: 500;
   }
 
   .spacer-flex {
@@ -283,7 +316,6 @@
     line-height: 1.55;
   }
 
-  /* Keep flagged lines clear of the sticky header when scrolled into view */
   table.diff tr {
     scroll-margin-top: calc(var(--header-h) + 12px);
     scroll-margin-bottom: 12px;
@@ -294,65 +326,90 @@
   }
 
   td {
-    padding: 0 8px;
+    padding: 0;
     white-space: pre-wrap;
     word-break: break-all;
     vertical-align: top;
   }
 
-  /* Leftmost gutter — comment + / finding flags, outside the code */
-  .act {
-    width: 28px;
-    min-width: 28px;
-    max-width: 28px;
-    padding: 1px 2px;
-    text-align: center;
-    vertical-align: middle;
-    background: #0a0a0a;
-    border-right: 1px solid color-mix(in srgb, var(--fg-code) 12%, transparent);
-    user-select: none;
-    white-space: nowrap;
-    word-break: normal;
-  }
-
-  .g {
+  /*
+   * Single gutter column: [num][sign]
+   * Comment button overlays on hover (no extra column).
+   */
+  .gutter {
+    position: relative;
     width: 1%;
-    min-width: 36px;
-    text-align: right;
-    color: color-mix(in srgb, var(--fg-code) 35%, transparent);
-    font-size: var(--fs-xs);
+    padding: 0 1px 0 18px; /* room for hover + / flag on the left */
+    border-right: 1px solid color-mix(in srgb, var(--fg-code) 10%, transparent);
+    background: #0c0c0c;
+    color: color-mix(in srgb, var(--fg-code) 38%, transparent);
+    font-size: 11px;
     font-variant-numeric: tabular-nums;
+    line-height: 1.55;
     user-select: none;
     white-space: nowrap;
     word-break: normal;
+    vertical-align: top;
   }
 
-  table.split .g {
-    width: 40px;
+  .gutter .num {
+    display: inline-block;
+    min-width: 1.75rem;
+    padding: 0;
+    text-align: right;
   }
 
-  .m {
-    width: 1%;
-    color: color-mix(in srgb, var(--fg-code) 35%, transparent);
-    user-select: none;
+  .gutter .sign {
+    display: inline-block;
+    width: 0.85rem;
+    text-align: center;
     font-weight: 700;
   }
 
-  .m.add {
+  .gutter.add .sign {
     color: var(--add-fg);
   }
 
-  .m.del {
+  .gutter.del .sign {
     color: var(--del-fg);
   }
 
-  .c {
-    padding-left: 8px;
+  .gutter.add {
+    background: color-mix(in srgb, var(--add-row) 70%, #0c0c0c);
   }
 
-  /* Keep shiki inline colors; only tint the row background */
+  .gutter.del {
+    background: color-mix(in srgb, var(--del-row) 70%, #0c0c0c);
+  }
+
+  .gutter.spacer {
+    background: #0a0a0a;
+  }
+
+  .c {
+    padding: 0 10px 0 8px;
+  }
+
+  /* Keep shiki token colors; only tint the row */
   .c :global(span[style]) {
     background: transparent !important;
+  }
+
+  /*
+   * Selection must hit nested shiki <span>s. Solid accent (no alpha) —
+   * transparent mixes silently fall back to system blue.
+   * !important beats inline token color on the selected range.
+   */
+  .c::selection,
+  .c :global(*)::selection {
+    background: var(--selection-bg) !important;
+    color: var(--selection-fg) !important;
+  }
+
+  .c::-moz-selection,
+  .c :global(*)::-moz-selection {
+    background: var(--selection-bg) !important;
+    color: var(--selection-fg) !important;
   }
 
   .c.add {
@@ -371,12 +428,22 @@
     background: #0a0a0a;
   }
 
-  table:not(.split) tr:has(.c.add) td:not(.act) {
+  table:not(.split) tr:has(.c.add) .gutter,
+  table:not(.split) tr:has(.c.add) .c {
     background: var(--add-row);
   }
 
-  table:not(.split) tr:has(.c.del) td:not(.act) {
+  table:not(.split) tr:has(.c.del) .gutter,
+  table:not(.split) tr:has(.c.del) .c {
     background: var(--del-row);
+  }
+
+  table:not(.split) tr:has(.c.add) .gutter {
+    background: color-mix(in srgb, var(--add-row) 85%, #0c0c0c);
+  }
+
+  table:not(.split) tr:has(.c.del) .gutter {
+    background: color-mix(in srgb, var(--del-row) 85%, #0c0c0c);
   }
 
   tr:hover .c:not(.spacer) {
@@ -391,24 +458,32 @@
     background: color-mix(in srgb, var(--del-row) 85%, #1a1a1a);
   }
 
+  /* Comment: sits in the gutter, reveals on row hover */
   .lc {
+    position: absolute;
+    left: 1px;
+    top: 50%;
+    z-index: 2;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 18px;
-    height: 18px;
+    width: 16px;
+    height: 16px;
     padding: 0;
+    transform: translateY(-50%);
     border: 1px solid var(--border);
     background: var(--accent);
     color: var(--accent-fg);
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 700;
     line-height: 1;
     opacity: 0;
+    pointer-events: none;
   }
 
   tr:hover .lc {
     opacity: 1;
+    pointer-events: auto;
   }
 
   .lc:hover {
@@ -420,8 +495,16 @@
     display: inline-block;
   }
 
-  .act .flag-anchor {
-    display: block;
+  .gutter .flag-anchor {
+    position: absolute;
+    left: 1px;
+    top: 50%;
+    z-index: 3;
+    transform: translateY(-50%);
+  }
+
+  .gutter:has(.flag-anchor) .lc {
+    display: none;
   }
 
   .flag {

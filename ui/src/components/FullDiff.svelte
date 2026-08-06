@@ -27,9 +27,11 @@
       {#if file.status === "binary"}
         <p class="binary">binary file</p>
       {:else}
-        {#each file.hunks as hunk (hunk.id)}
-          <DiffView {file} {hunk} viewable />
-        {/each}
+        <div class="hunks">
+          {#each file.hunks as hunk (hunk.id)}
+            <DiffView {file} {hunk} viewable embedded />
+          {/each}
+        </div>
       {/if}
     </details>
   {/each}

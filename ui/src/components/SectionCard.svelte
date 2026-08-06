@@ -28,7 +28,10 @@
         range={snippet.from != null && snippet.to != null ? { from: snippet.from, to: snippet.to } : null}
       />
       {#if snippet.note.trim()}
-        <div class="note"><Prose text={snippet.note} /></div>
+        <aside class="note">
+          <span class="note-kicker">Note</span>
+          <div class="note-body"><Prose text={snippet.note} /></div>
+        </aside>
       {/if}
     {:else}
       <p class="missing">unknown hunk {snippet.hunk_id}</p>
@@ -70,14 +73,48 @@
     font-size: var(--fs-md);
   }
 
+  /* Bridge caption between code excerpts — hard card, not a soft callout */
   .note {
-    margin: 0 0 12px;
-    padding: 10px 12px;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin: 10px 0 16px;
+    padding: 0;
+    overflow: hidden;
     border: var(--border-w) solid var(--border);
-    border-left: 4px solid var(--accent);
-    background: var(--bg-panel);
-    color: var(--fg-muted);
+    background: var(--bg-raised);
+    box-shadow: var(--shadow-card);
+  }
+
+  .note-kicker {
+    flex-shrink: 0;
+    align-self: stretch;
+    display: grid;
+    place-items: center;
+    min-width: 52px;
+    padding: 10px 8px;
+    border-right: var(--border-w) solid var(--border);
+    background: var(--accent);
+    color: var(--accent-fg);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    line-height: 1.2;
+  }
+
+  .note-body {
+    flex: 1;
+    min-width: 0;
+    padding: 10px 14px 10px 0;
+    color: var(--fg);
     font-size: var(--fs-sm);
+    font-weight: 500;
+    line-height: 1.45;
+  }
+
+  .note-body :global(p) {
+    margin: 0;
   }
 
   .missing {

@@ -175,10 +175,10 @@ export class ReviewState {
     if (!anchor) return;
     const details = anchor.closest("details");
     if (details) details.open = true;
-    // Park the line near the top so the finding card can open below without
-    // covering the code it refers to (FindingPopover places relative to the row).
+    // Center the line so the popover has room above or below; FindingPopover
+    // places itself and respects the sticky header offset.
     const row = anchor.closest("tr") ?? anchor;
-    row.scrollIntoView({ behavior: "instant", block: "start" });
+    row.scrollIntoView({ behavior: "instant", block: "center" });
   }
 
   openComposer(ref: string, quote: string, opts: { html?: string; anchor?: PendingComment["anchor"] } = {}) {

@@ -10,27 +10,40 @@
 
 <style>
   /*
-   * Diagram color aliases — non-colliding names so beautiful-mermaid can set
-   * --bg/--fg/--accent on the SVG without circular var() references.
-   * Values track the neobrutal design tokens (and dark mode).
+   * Diagram field is quieter than page chrome: light surface, soft edges.
+   * Outer card keeps the hard neobrutal border; interior shouldn't shout.
+   * Nodes stay readable (near-black type); arrows keep accent orange.
    */
   .diagram {
-    --d-bg: var(--bg-raised);
+    --d-bg: #faf8f4;
     --d-fg: var(--fg);
-    --d-line: var(--border);
+    /* Edges / lifelines — graphite, not pure black (less clash) */
+    --d-line: #9a948a;
     --d-accent: var(--accent);
     --d-muted: var(--fg-faint);
-    --d-surface: var(--bg-panel);
-    --d-border: var(--border);
+    --d-surface: #ffffff;
+    /* Node outlines slightly softer than page --border */
+    --d-border: #2a2a2a;
 
     display: flex;
     justify-content: center;
     margin: 14px 0;
-    padding: 20px 18px;
+    padding: 22px 20px;
     overflow: auto;
     border: var(--border-w) solid var(--border);
-    background: var(--bg-raised);
+    background: #faf8f4;
     box-shadow: var(--shadow-card);
+  }
+
+  /* Dark mode: lift the field, keep edges muted against black chrome */
+  @media (prefers-color-scheme: dark) {
+    .diagram {
+      --d-bg: #141414;
+      --d-line: #6a6a6a;
+      --d-border: #c8c8c8;
+      --d-surface: #1c1c1c;
+      background: #141414;
+    }
   }
 
   .diagram :global(svg) {
@@ -40,31 +53,38 @@
     margin: auto;
   }
 
-  /* Labels: UI sans, slightly heavy — matches walkthrough chrome */
   .diagram :global(text) {
     font-family: var(--font-ui) !important;
     font-weight: 600;
-    letter-spacing: 0.01em;
+    fill: var(--fg) !important;
   }
 
-  /* Node labels stay mono-ish weight; identifiers read cleaner heavy */
   .diagram :global(.node) :global(text) {
-    font-family: var(--font-code) !important;
-    font-weight: 600;
-    font-size: 12.5px;
+    font-size: 13px;
   }
 
-  /* Group headers: kicker-style uppercase chrome */
-  .diagram :global(.subgraph) > :global(text) {
-    font-weight: 700;
-    font-size: 11px;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
+  /* Sequence: alt/loop frames use group fills — keep them barely-there */
+  .diagram :global(.subgraph) > :global(rect:first-child) {
+    fill: color-mix(in srgb, var(--d-bg) 70%, #ffffff);
   }
 
-  /* Cream header band on white group body */
   .diagram :global(.subgraph) > :global(rect:nth-child(2)) {
-    fill: var(--bg-panel);
+    fill: #ffffff;
+  }
+
+  .diagram :global(.subgraph) > :global(text) {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    fill: var(--fg-faint) !important;
+  }
+
+  .diagram :global(.node) > :global(rect),
+  .diagram :global(.node) > :global(polygon),
+  .diagram :global(.node) > :global(circle),
+  .diagram :global(.node) > :global(ellipse) {
+    fill: var(--d-surface);
   }
 
   pre.source {
