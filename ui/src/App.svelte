@@ -31,6 +31,17 @@
   );
 
   onMount(() => {
+    // Pierre SSR core CSS (shared once). Authored for :host (shadow); payload
+    // already rewrites to .pierre-host, but normalize again for safety.
+    if (payload.pierre?.css && !document.getElementById("pierre-diffs-css")) {
+      const style = document.createElement("style");
+      style.id = "pierre-diffs-css";
+      style.textContent = payload.pierre.css
+        .replace(/:host\b/g, ".pierre-host")
+        .replace(/\.pierre-host\(([^)]*)\)/g, ".pierre-host:is($1)");
+      document.head.appendChild(style);
+    }
+
     const mq = window.matchMedia("(max-width: 1119px)");
     const sync = () => review.setNarrow(mq.matches);
     sync();
@@ -118,21 +129,20 @@
 <style>
   .layout {
     display: grid;
-    /* Left = Walk XOR Files (~160); center reading; right Review */
-    grid-template-columns: 160px minmax(0, 1fr) minmax(280px, 320px);
-    align-items: start;
-    gap: 0 10px;
-    max-width: 1680px;
-    margin: 0 auto;
+    /* Left = Walk XOR Files; center reading; right Review — full bleed, zero gap */
+    grid-template-columns: 220px minmax(0, 1fr) minmax(280px, 340px);
+    align-items: stretch;
+    gap: 0;
     width: 100%;
+    min-height: calc(100vh - var(--header-h));
   }
 
   /* Wide: tuck left and/or right — main expands */
   .layout.no-left:not(.narrow) {
-    grid-template-columns: minmax(0, 1fr) minmax(280px, 320px);
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 340px);
   }
   .layout.no-review:not(.narrow) {
-    grid-template-columns: 160px minmax(0, 1fr);
+    grid-template-columns: 220px minmax(0, 1fr);
   }
   .layout.no-left.no-review:not(.narrow),
   .layout.narrow {
@@ -142,11 +152,13 @@
   main {
     min-width: 0;
     width: 100%;
-    padding: var(--space-5) var(--space-4) var(--space-7);
+    min-height: calc(100vh - var(--header-h));
+    padding: var(--space-3) var(--space-3) var(--space-5);
+    background: var(--bg);
   }
 
   .tldr {
-    padding: var(--space-4) var(--space-5) var(--space-5);
+    padding: var(--space-3) var(--space-4);
     border: var(--border-w) solid var(--border);
     border-radius: var(--radius);
     background: var(--bg-raised);
@@ -158,7 +170,7 @@
     align-items: baseline;
     justify-content: space-between;
     gap: var(--space-3);
-    margin-bottom: var(--space-3);
+    margin-bottom: var(--space-2);
   }
 
   .kicker {
@@ -194,9 +206,9 @@
     max-width: none;
   }
 
-  /* Breathing room between major main-column blocks */
+  /* Tight stack between main-column blocks */
   .tldr + :global(*) {
-    margin-top: var(--space-5);
+    margin-top: var(--space-3);
   }
 
   /* Below sticky header so Walk / Review / Done stay usable while a drawer is open */
@@ -244,7 +256,7 @@
 
   @media (max-width: 720px) {
     main {
-      padding: 12px 10px 64px;
+      padding: 10px 8px 48px;
     }
   }
 </style>

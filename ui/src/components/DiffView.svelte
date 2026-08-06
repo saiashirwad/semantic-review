@@ -1,7 +1,8 @@
 <script lang="ts">
-  import type { PayloadFile, PayloadHunk, PayloadLine } from "../../../src/payload.ts";
+  import type { PayloadFile, PayloadHunk } from "../../../src/payload.ts";
   import { findingAnchorId, findingsForLine, getReviewState } from "../state.svelte.ts";
   import Check from "./Check.svelte";
+  import PierreDiff from "./PierreDiff.svelte";
 
   interface Props {
     file: PayloadFile;
@@ -16,28 +17,31 @@
   const { file, hunk, range = null, viewable = false, embedded = false }: Props = $props();
   const review = getReviewState();
 
-  // In Full diff the file row already has Viewed; only offer per-hunk checks
-  // when a file is split across multiple hunks.
   const showHunkViewed = $derived(viewable && (!embedded || file.hunks.length > 1));
 
+  const pierreHtml = $derived(
+    review.diffMode === "split"
+      ? (hunk.pierre?.split || hunk.pierre?.unified || "")
+      : (hunk.pierre?.unified || hunk.pierre?.split || ""),
+  );
+  const usePierre = $derived(pierreHtml.length > 0);
+
+  // Legacy table path (fallback when Pierre SSR missing)
   let expanded = $state(false);
-
   const allIndices = $derived(hunk.lines.map((_, i) => i));
-
   const excerptIndices = $derived.by(() => {
     if (!range || expanded) return allIndices;
     const within = (n: number | null) => n != null && n >= range.from && n <= range.to;
     const sliced = allIndices.filter((i) => within(hunk.lines[i].newNo) || within(hunk.lines[i].oldNo));
     return sliced.length > 0 ? sliced : allIndices;
   });
-
-  const elided = $derived(excerptIndices.length < hunk.lines.length);
+  const elided = $derived(!usePierre && excerptIndices.length < hunk.lines.length);
   const hiddenAbove = $derived(elided ? excerptIndices[0] : 0);
   const hiddenBelow = $derived(elided ? hunk.lines.length - 1 - excerptIndices[excerptIndices.length - 1] : 0);
 
   interface SplitRow {
-    left: { line: PayloadLine; idx: number } | null;
-    right: { line: PayloadLine; idx: number } | null;
+    left: { line: (typeof hunk.lines)[0]; idx: number } | null;
+    right: { line: (typeof hunk.lines)[0]; idx: number } | null;
   }
 
   const splitRows = $derived.by(() => {
@@ -65,20 +69,17 @@
     return rows;
   });
 
-  /** One number column: new line for adds/context, old line for dels. */
-  function lineNo(line: PayloadLine, side: "left" | "right" | "unified"): string | number {
+  function lineNo(line: (typeof hunk.lines)[0], side: "left" | "right" | "unified"): string | number {
     if (side === "left") return line.oldNo ?? "";
     if (side === "right") return line.newNo ?? "";
-    // unified
     if (line.kind === "del") return line.oldNo ?? "";
     return line.newNo ?? line.oldNo ?? "";
   }
 
-  function sign(line: PayloadLine): string {
+  function sign(line: (typeof hunk.lines)[0]): string {
     return line.kind === "add" ? "+" : line.kind === "del" ? "−" : " ";
   }
 
-  // One index rebuild per reactive pass; line lookups are O(1) map gets.
   const openBySlot = $derived(review.findingsIndex.get(hunk.id));
   const hunkFlags = $derived(openBySlot?.get("hunk") ?? []);
 
@@ -86,7 +87,7 @@
     return findingsForLine(openBySlot, hunk.lines[idx]);
   }
 
-  function openComment(line: PayloadLine, idx: number, e: MouseEvent) {
+  function openComment(line: (typeof hunk.lines)[0], idx: number, e: MouseEvent) {
     const rect = (e.currentTarget as HTMLElement).closest("tr")!.getBoundingClientRect();
     review.openComposer(review.refForLine(hunk.id, idx), line.text, {
       html: line.html,
@@ -122,10 +123,9 @@
   {/if}
 {/snippet}
 
-{#snippet rowMeta(entry: { line: PayloadLine; idx: number } | null, side: "left" | "right" | "unified")}
+{#snippet rowMeta(entry: { line: (typeof hunk.lines)[0]; idx: number } | null, side: "left" | "right" | "unified")}
   {#if entry}
     {@const { line, idx } = entry}
-    <!-- Combined gutter: line number + sign; comment on hover -->
     <td class="gutter {line.kind}">
       <button class="lc" title="Comment on this line" onclick={(e) => openComment(line, idx, e)}>+</button>
       {@render gutterFlag(idx)}
@@ -151,7 +151,7 @@
     {#if !embedded}
       <span class="path">{file.path}</span>
     {/if}
-    {#if elided}<span class="tag">excerpt</span>{/if}
+    {#if range}<span class="tag">excerpt</span>{/if}
     <span class="header" class:solo={embedded}>{hunk.header}</span>
     <span class="spacer-flex"></span>
     {#if hunkFlags.length > 0}
@@ -176,43 +176,47 @@
       </span>
     {/if}
   </div>
-  {#if elided && hiddenAbove > 0}
-    <button class="expand" onclick={() => (expanded = true)}>
-      ↑ {hiddenAbove} more line{hiddenAbove === 1 ? "" : "s"}
-    </button>
-  {/if}
-  {#if review.diffMode === "unified"}
-    <table class="diff">
-      <tbody>
-        {#each excerptIndices as idx (idx)}
-          <tr>
-            {@render rowMeta({ line: hunk.lines[idx], idx }, "unified")}
-          </tr>
-        {/each}
-      </tbody>
-    </table>
+  {#if usePierre}
+    <PierreDiff {file} {hunk} {range} html={pierreHtml} />
   {:else}
-    <table class="diff split">
-      <tbody>
-        {#each splitRows as row, i (i)}
-          <tr>
-            {@render rowMeta(row.left, "left")}
-            {@render rowMeta(row.right, "right")}
-          </tr>
-        {/each}
-      </tbody>
-    </table>
-  {/if}
-  {#if elided && hiddenBelow > 0}
-    <button class="expand" onclick={() => (expanded = true)}>
-      ↓ {hiddenBelow} more line{hiddenBelow === 1 ? "" : "s"}
-    </button>
+    {#if elided && hiddenAbove > 0}
+      <button class="expand" onclick={() => (expanded = true)}>
+        ↑ {hiddenAbove} more line{hiddenAbove === 1 ? "" : "s"}
+      </button>
+    {/if}
+    {#if review.diffMode === "unified"}
+      <table class="diff">
+        <tbody>
+          {#each excerptIndices as idx (idx)}
+            <tr>
+              {@render rowMeta({ line: hunk.lines[idx], idx }, "unified")}
+            </tr>
+          {/each}
+        </tbody>
+      </table>
+    {:else}
+      <table class="diff split">
+        <tbody>
+          {#each splitRows as row, i (i)}
+            <tr>
+              {@render rowMeta(row.left, "left")}
+              {@render rowMeta(row.right, "right")}
+            </tr>
+          {/each}
+        </tbody>
+      </table>
+    {/if}
+    {#if elided && hiddenBelow > 0}
+      <button class="expand" onclick={() => (expanded = true)}>
+        ↓ {hiddenBelow} more line{hiddenBelow === 1 ? "" : "s"}
+      </button>
+    {/if}
   {/if}
 </div>
 
 <style>
   .hunk {
-    margin: 12px 0;
+    margin: 10px 0 14px;
     overflow: hidden;
     border: var(--border-w) solid var(--border);
     background: var(--bg-code);
@@ -221,11 +225,10 @@
     font-family: var(--font-code);
   }
 
-  /* Nested under Full diff file row — no second card shadow / path chrome */
   .hunk.embedded {
     margin: 0;
     border: 0;
-    border-top: 1px solid color-mix(in srgb, var(--fg-code) 14%, transparent);
+    border-top: 1px solid color-mix(in srgb, var(--fg-code) 12%, transparent);
     box-shadow: none;
   }
 
@@ -233,46 +236,51 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    min-height: 32px;
-    padding: 6px 12px;
-    border-bottom: var(--border-w) solid color-mix(in srgb, var(--fg-code) 18%, transparent);
-    background: #0a0a0a;
+    min-height: 28px;
+    padding: 0 10px;
+    border-bottom: 1px solid color-mix(in srgb, var(--fg-code) 12%, transparent);
+    background: #0c0c0c;
     font-family: var(--font-code);
-    font-size: var(--fs-sm);
+    font-size: 12px;
   }
 
   .hunk.embedded .head {
-    min-height: 28px;
-    padding: 4px 12px;
-    background: #0e0e0e;
+    min-height: 26px;
+    padding: 0 10px;
+    background: #0c0c0c;
     border-bottom-color: color-mix(in srgb, var(--fg-code) 10%, transparent);
   }
 
   .path {
     color: var(--fg-code);
-    font-weight: 700;
+    font-weight: 600;
+    letter-spacing: -0.01em;
   }
 
   .tag {
-    padding: 1px 6px;
-    border: 1px solid var(--accent);
+    padding: 0 5px;
+    height: 16px;
+    border: 0;
     background: var(--accent);
     color: var(--accent-fg);
-    font-size: 10px;
+    font-size: 9px;
     font-weight: 700;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.06em;
+    line-height: 16px;
     text-transform: uppercase;
   }
 
   .header {
     overflow: hidden;
-    color: color-mix(in srgb, var(--fg-code) 50%, transparent);
+    color: color-mix(in srgb, var(--fg-code) 42%, transparent);
+    font-size: 11px;
+    font-weight: 500;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
 
   .header.solo {
-    color: color-mix(in srgb, var(--fg-code) 62%, transparent);
+    color: color-mix(in srgb, var(--fg-code) 55%, transparent);
     font-weight: 500;
   }
 
@@ -331,14 +339,10 @@
     vertical-align: top;
   }
 
-  /*
-   * Single gutter column: [num][sign]
-   * Comment button overlays on hover (no extra column).
-   */
   .gutter {
     position: relative;
     width: 1%;
-    padding: 0 1px 0 18px; /* room for hover + / flag on the left */
+    padding: 0 1px 0 18px;
     border-right: 1px solid color-mix(in srgb, var(--fg-code) 10%, transparent);
     background: #0c0c0c;
     color: color-mix(in srgb, var(--fg-code) 38%, transparent);
@@ -389,12 +393,10 @@
     padding: 0 10px 0 8px;
   }
 
-  /* Keep shiki token colors; only tint the row */
   .c :global(span[style]) {
     background: transparent !important;
   }
 
-  /* Soft wash over nested token spans — keep syntax color visible */
   .c::selection,
   .c :global(*)::selection {
     background: color-mix(in srgb, var(--accent) 36%, transparent) !important;
@@ -402,11 +404,11 @@
   }
 
   .c.add {
-    background: var(--add-row);
+    background: color-mix(in srgb, var(--add-fg) 9%, #111111);
   }
 
   .c.del {
-    background: var(--del-row);
+    background: color-mix(in srgb, var(--del-fg) 10%, #111111);
   }
 
   .c.flagged {
@@ -419,35 +421,34 @@
 
   table:not(.split) tr:has(.c.add) .gutter,
   table:not(.split) tr:has(.c.add) .c {
-    background: var(--add-row);
+    background: color-mix(in srgb, var(--add-fg) 9%, #111111);
   }
 
   table:not(.split) tr:has(.c.del) .gutter,
   table:not(.split) tr:has(.c.del) .c {
-    background: var(--del-row);
+    background: color-mix(in srgb, var(--del-fg) 10%, #111111);
   }
 
   table:not(.split) tr:has(.c.add) .gutter {
-    background: color-mix(in srgb, var(--add-row) 85%, #0c0c0c);
+    background: color-mix(in srgb, var(--add-fg) 7%, #0c0c0c);
   }
 
   table:not(.split) tr:has(.c.del) .gutter {
-    background: color-mix(in srgb, var(--del-row) 85%, #0c0c0c);
+    background: color-mix(in srgb, var(--del-fg) 8%, #0c0c0c);
   }
 
   tr:hover .c:not(.spacer) {
-    background: #1a1a1a;
+    background: #161616;
   }
 
   tr:hover .c.add {
-    background: color-mix(in srgb, var(--add-row) 85%, #1a1a1a);
+    background: color-mix(in srgb, var(--add-fg) 12%, #161616);
   }
 
   tr:hover .c.del {
-    background: color-mix(in srgb, var(--del-row) 85%, #1a1a1a);
+    background: color-mix(in srgb, var(--del-fg) 12%, #161616);
   }
 
-  /* Comment: sits in the gutter, reveals on row hover */
   .lc {
     position: absolute;
     left: 1px;

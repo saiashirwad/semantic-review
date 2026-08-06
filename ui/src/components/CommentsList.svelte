@@ -58,8 +58,9 @@
   .empty {
     width: 100%;
     margin: 0;
-    padding: 12px 14px;
-    border: 2px dashed var(--border);
+    padding: 12px 10px;
+    border: 0;
+    border-bottom: var(--border-w) solid var(--border);
     background: var(--bg-raised);
     color: var(--fg-faint);
     font-size: var(--fs-sm);
@@ -84,10 +85,11 @@
 
   .card {
     width: 100%;
-    margin-bottom: 10px;
-    border: var(--border-w) solid var(--border);
+    margin: 0;
+    border: 0;
+    border-bottom: var(--border-w) solid var(--border);
     background: var(--bg-raised);
-    box-shadow: var(--shadow-card);
+    box-shadow: none;
     box-sizing: border-box;
     overflow: hidden;
   }

@@ -24,8 +24,8 @@
 
     display: flex;
     justify-content: center;
-    margin: var(--space-4) 0 var(--space-5);
-    padding: var(--space-5) var(--space-4);
+    margin: var(--space-3) 0;
+    padding: var(--space-3) var(--space-3);
     overflow: auto;
     border: var(--border-w) solid var(--border);
     background: var(--diagram-bg);

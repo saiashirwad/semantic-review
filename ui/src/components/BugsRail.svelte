@@ -58,13 +58,17 @@
   aside {
     position: sticky;
     top: var(--header-h);
+    display: flex;
+    flex-direction: column;
     height: calc(100vh - var(--header-h));
     width: 100%;
     min-width: 0;
-    overflow-x: visible;
+    min-height: 0;
+    overflow-x: hidden;
     overflow-y: auto;
-    /* Extra right/bottom padding so hard offset shadows aren't clipped */
-    padding: var(--space-4) var(--space-4) var(--space-5) var(--space-2);
+    padding: 0;
+    background: var(--bg-raised);
+    border-left: var(--border-w) solid var(--border);
   }
 
   /* Wide tucked: leave the grid entirely */
@@ -80,12 +84,12 @@
     bottom: 0;
     left: auto;
     z-index: 30;
-    width: min(340px, calc(100vw - 48px));
+    width: min(340px, calc(100vw - 40px));
     height: auto;
-    padding: var(--space-3) var(--space-3) var(--space-5);
+    padding: 0;
     background: var(--bg-raised);
     border-left: var(--border-w) solid var(--border);
-    box-shadow: -8px 0 0 var(--border);
+    box-shadow: -6px 0 0 var(--border);
     transform: translateX(100%);
     visibility: hidden;
     pointer-events: none;
@@ -108,15 +112,19 @@
 
   .rail-head {
     display: flex;
+    flex-shrink: 0;
     align-items: center;
     gap: 8px;
-    margin: 0 0 var(--space-3);
-    padding: 0 2px;
+    height: 36px;
+    margin: 0;
+    padding: 0 8px;
+    border-bottom: var(--border-w) solid var(--border);
+    background: var(--bg-panel);
   }
 
   .rail-label {
     flex: 1;
-    color: var(--fg-faint);
+    color: var(--fg);
     font-size: var(--fs-xs);
     font-weight: 700;
     letter-spacing: 0.1em;
@@ -152,10 +160,11 @@
 
   .findings-box {
     width: 100%;
-    margin-bottom: var(--space-5);
-    border: var(--border-w) solid var(--border);
+    margin: 0;
+    border: 0;
+    border-bottom: var(--border-w) solid var(--border);
     background: var(--bg-raised);
-    box-shadow: var(--shadow-card);
+    box-shadow: none;
   }
 
   .findings-head {
@@ -164,9 +173,9 @@
     gap: 8px;
     width: 100%;
     height: 36px;
-    padding: 0 12px;
+    padding: 0 10px;
     border: 0;
-    background: var(--bg-panel);
+    background: var(--bg-inset);
   }
 
   .findings-head:hover {
@@ -209,8 +218,11 @@
   }
 
   h3 {
-    margin: var(--space-4) 0 var(--space-2);
-    color: var(--fg-faint);
+    margin: 0;
+    padding: 8px 10px 6px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-inset);
+    color: var(--fg);
     font-size: var(--fs-xs);
     font-weight: 700;
     letter-spacing: 0.1em;
@@ -220,9 +232,5 @@
 
   h3:first-of-type {
     margin-top: 0;
-  }
-
-  h3:not(:first-child) {
-    margin-top: 20px;
   }
 </style>

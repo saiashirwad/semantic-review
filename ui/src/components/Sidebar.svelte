@@ -234,9 +234,14 @@
   nav {
     position: sticky;
     top: var(--header-h);
+    display: flex;
+    flex-direction: column;
     height: calc(100vh - var(--header-h));
+    min-height: 0;
     overflow-y: auto;
-    padding: 10px 8px 20px;
+    padding: 0;
+    background: var(--bg-raised);
+    border-right: var(--border-w) solid var(--border);
   }
 
   nav:not(.drawer):not(.open) {
@@ -249,12 +254,12 @@
     left: 0;
     bottom: 0;
     z-index: 30;
-    width: min(280px, calc(100vw - 48px));
+    width: min(300px, calc(100vw - 40px));
     height: auto;
-    padding: 12px 10px 20px;
+    padding: 0;
     background: var(--bg-raised);
     border-right: var(--border-w) solid var(--border);
-    box-shadow: 8px 0 0 var(--border);
+    box-shadow: 6px 0 0 var(--border);
     transform: translateX(-100%);
     visibility: hidden;
     pointer-events: none;
@@ -277,10 +282,14 @@
 
   .head {
     display: flex;
+    flex-shrink: 0;
     align-items: center;
     gap: 6px;
-    margin-bottom: 8px;
-    padding: 0 2px;
+    height: 36px;
+    margin: 0;
+    padding: 0 8px;
+    border-bottom: var(--border-w) solid var(--border);
+    background: var(--bg-panel);
   }
 
   .tuck {
@@ -307,14 +316,15 @@
   }
 
   .label {
-    color: var(--fg-faint);
-    font-size: 10px;
+    color: var(--fg);
+    font-size: 11px;
     font-weight: 700;
     letter-spacing: 0.1em;
     text-transform: uppercase;
   }
 
   .steps {
+    flex: 1;
     margin: 0;
     padding: 0;
     list-style: none;
@@ -322,12 +332,14 @@
 
   .step {
     margin: 0;
+    border-bottom: 1px solid var(--border);
   }
 
   .step-row {
     display: flex;
     align-items: center;
     gap: 4px;
+    padding-right: 6px;
   }
 
   .step-btn {
@@ -336,8 +348,8 @@
     gap: 6px;
     flex: 1;
     min-width: 0;
-    min-height: 28px;
-    padding: 4px 4px;
+    min-height: 32px;
+    padding: 6px 8px;
     border: 0;
     border-radius: 0;
     background: transparent;
@@ -346,7 +358,6 @@
     font-weight: 600;
     text-align: left;
     cursor: pointer;
-    transition: background 0.08s ease, color 0.08s ease;
   }
 
   .step-btn:hover {
@@ -355,7 +366,8 @@
   }
 
   .step-btn.active {
-    color: var(--fg);
+    background: var(--fg);
+    color: var(--bg-raised);
   }
 
   .step-text {
@@ -383,9 +395,10 @@
   }
 
   .step-btn.active .num {
-    background: var(--fg);
-    color: var(--bg-raised);
-    box-shadow: 2px 2px 0 var(--accent);
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+    box-shadow: none;
   }
 
   .badge {
@@ -416,32 +429,34 @@
   }
 
   .meta {
-    margin: 0 0 4px;
-    padding: 0 0 0 24px;
+    margin: 0;
+    padding: 0 0 4px;
     list-style: none;
+    background: var(--bg-inset);
+    border-top: 1px solid var(--border);
   }
 
   .meta li {
     display: flex;
     align-items: center;
     gap: 4px;
-    min-height: 18px;
-    padding: 0 2px;
+    min-height: 20px;
+    padding: 0 6px 0 0;
   }
 
   .meta-name {
     flex: 1;
     min-width: 0;
     margin: 0;
-    padding: 1px 2px;
+    padding: 2px 8px;
     overflow: hidden;
     border: 0;
     border-radius: 0;
     background: transparent;
-    color: var(--fg-faint);
+    color: var(--fg-muted);
     font-family: var(--font-code);
     font-size: 10px;
-    font-weight: 500;
+    font-weight: 600;
     text-align: left;
     text-overflow: ellipsis;
     white-space: nowrap;

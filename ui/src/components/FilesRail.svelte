@@ -1,4 +1,8 @@
 <script lang="ts">
+  /**
+   * Files panel — hierarchical tree with viewed checkboxes, jump, +/−, status.
+   * Pure Svelte; hard neobrutalist chrome (no third-party tree widget).
+   */
   import type { PayloadFile } from "../../../src/payload.ts";
   import { getReviewState } from "../state.svelte.ts";
   import Check from "./Check.svelte";
@@ -7,13 +11,134 @@
   const fileCount = $derived(review.payload.files.length);
   const viewedCount = $derived(review.viewedFileCount);
 
-  function baseName(path: string) {
-    const i = path.lastIndexOf("/");
-    return i >= 0 ? path.slice(i + 1) : path;
+  let query = $state("");
+  /** Collapsed directory paths (everything else is open). */
+  let collapsed = $state(new Set<string>());
+
+  type DirNode = {
+    kind: "dir";
+    name: string;
+    path: string;
+    children: TreeNode[];
+  };
+  type FileNode = {
+    kind: "file";
+    name: string;
+    file: PayloadFile;
+  };
+  type TreeNode = DirNode | FileNode;
+
+  function insertFile(root: DirNode, file: PayloadFile) {
+    const parts = file.path.split("/").filter(Boolean);
+    let node = root;
+    for (let i = 0; i < parts.length - 1; i++) {
+      const name = parts[i]!;
+      const dirPath = parts.slice(0, i + 1).join("/");
+      let child = node.children.find((c): c is DirNode => c.kind === "dir" && c.name === name);
+      if (!child) {
+        child = { kind: "dir", name, path: dirPath, children: [] };
+        node.children.push(child);
+      }
+      node = child;
+    }
+    const name = parts[parts.length - 1] ?? file.path;
+    node.children.push({ kind: "file", name, file });
+  }
+
+  function sortNode(node: DirNode) {
+    node.children.sort((a, b) => {
+      if (a.kind !== b.kind) return a.kind === "dir" ? -1 : 1;
+      return a.name.localeCompare(b.name);
+    });
+    for (const c of node.children) {
+      if (c.kind === "dir") sortNode(c);
+    }
+  }
+
+  const filtered = $derived.by(() => {
+    const q = query.trim().toLowerCase();
+    const files = review.payload.files;
+    if (!q) return files;
+    return files.filter((f) => f.path.toLowerCase().includes(q));
+  });
+
+  const tree = $derived.by(() => {
+    const root: DirNode = { kind: "dir", name: "", path: "", children: [] };
+    for (const file of filtered) insertFile(root, file);
+    sortNode(root);
+    return root;
+  });
+
+  /** Flat visible rows for rendering (respects collapse + filter). */
+  type Row =
+    | { kind: "dir"; name: string; path: string; depth: number; open: boolean }
+    | { kind: "file"; name: string; file: PayloadFile; depth: number };
+
+  const rows = $derived.by(() => {
+    const out: Row[] = [];
+    const filtering = query.trim().length > 0;
+
+    function walk(nodes: TreeNode[], depth: number) {
+      for (const n of nodes) {
+        if (n.kind === "dir") {
+          const open = filtering || !collapsed.has(n.path);
+          out.push({ kind: "dir", name: n.name, path: n.path, depth, open });
+          if (open) walk(n.children, depth + 1);
+        } else {
+          out.push({ kind: "file", name: n.name, file: n.file, depth });
+        }
+      }
+    }
+    walk(tree.children, 0);
+    return out;
+  });
+
+  function toggleDir(path: string) {
+    const next = new Set(collapsed);
+    if (next.has(path)) next.delete(path);
+    else next.add(path);
+    collapsed = next;
+  }
+
+  function statusLetter(file: PayloadFile): string {
+    switch (file.status) {
+      case "added":
+        return "A";
+      case "deleted":
+        return "D";
+      case "renamed":
+        return "R";
+      default:
+        return "M";
+    }
   }
 
   function onJump(file: PayloadFile) {
     void review.jumpToFile(file.path);
+  }
+
+  function markAll(viewed: boolean) {
+    for (const f of review.payload.files) review.setFileViewed(f, viewed);
+  }
+
+  function dirViewedState(path: string): { all: boolean; some: boolean } {
+    const prefix = path + "/";
+    let total = 0;
+    let viewed = 0;
+    for (const f of review.payload.files) {
+      if (f.path === path || f.path.startsWith(prefix)) {
+        total++;
+        if (review.fileViewed(f)) viewed++;
+      }
+    }
+    return { all: total > 0 && viewed === total, some: viewed > 0 && viewed < total };
+  }
+
+  function markDir(path: string, viewed: boolean) {
+    const prefix = path + "/";
+    for (const f of review.payload.files) {
+      if (f.path === path || f.path.startsWith(prefix)) review.setFileViewed(f, viewed);
+    }
   }
 </script>
 
@@ -41,25 +166,60 @@
     </button>
   </header>
 
-  <p class="hint">Mark files viewed after you scan the full diff.</p>
+  <div class="toolbar">
+    <input
+      class="search"
+      type="search"
+      placeholder="Filter…"
+      bind:value={query}
+      aria-label="Filter files"
+    />
+    <button type="button" class="mini" onclick={() => markAll(true)}>All</button>
+    <button type="button" class="mini" onclick={() => markAll(false)}>Clear</button>
+  </div>
 
-  <ul class="checklist" aria-label="Files to review">
-    {#each review.payload.files as file (file.path)}
-      {@const viewed = review.fileViewed(file)}
-      <li class="check-row" class:viewed>
-        <Check
-          checked={viewed}
-          ariaLabel={viewed ? `Unmark ${file.path} as viewed` : `Mark ${file.path} as viewed`}
-          onchange={() => review.setFileViewed(file, !viewed)}
-        />
-        <button type="button" class="file-jump" title={file.path} onclick={() => onJump(file)}>
-          <span class="file-base">{baseName(file.path)}</span>
-          <span class="counts">
-            {#if file.adds > 0}<b class="add">+{file.adds}</b>{/if}
-            {#if file.dels > 0}<b class="del">−{file.dels}</b>{/if}
-          </span>
-        </button>
-      </li>
+  <ul class="tree" aria-label="Files to review">
+    {#each rows as row (row.kind === "dir" ? `d:${row.path}` : `f:${row.file.path}`)}
+      {#if row.kind === "dir"}
+        {@const state = dirViewedState(row.path)}
+        <li class="row dir" class:open={row.open} style:--d={row.depth}>
+          <Check
+            checked={state.all}
+            ariaLabel={state.all ? `Unmark all under ${row.path}` : `Mark all under ${row.path} viewed`}
+            onchange={() => markDir(row.path, !state.all)}
+          />
+          <button
+            type="button"
+            class="main"
+            aria-expanded={row.open}
+            onclick={() => toggleDir(row.path)}
+          >
+            <span class="twist" aria-hidden="true">{row.open ? "▾" : "▸"}</span>
+            <span class="name">{row.name}/</span>
+          </button>
+        </li>
+      {:else}
+        {@const viewed = review.fileViewed(row.file)}
+        <li class="row file" class:viewed style:--d={row.depth}>
+          <Check
+            checked={viewed}
+            ariaLabel={viewed ? `Unmark ${row.file.path} as viewed` : `Mark ${row.file.path} as viewed`}
+            onchange={() => review.setFileViewed(row.file, !viewed)}
+          />
+          <button type="button" class="main" title={row.file.path} onclick={() => onJump(row.file)}>
+            <span class="name">{row.name}</span>
+            <span class="meta">
+              {#if row.file.adds > 0}<b class="add">+{row.file.adds}</b>{/if}
+              {#if row.file.dels > 0}<b class="del">−{row.file.dels}</b>{/if}
+              <span class="status" data-status={row.file.status} title={row.file.status}
+                >{statusLetter(row.file)}</span
+              >
+            </span>
+          </button>
+        </li>
+      {/if}
+    {:else}
+      <li class="empty">No matches</li>
     {/each}
   </ul>
 </aside>
@@ -68,9 +228,14 @@
   aside {
     position: sticky;
     top: var(--header-h);
+    display: flex;
+    flex-direction: column;
     height: calc(100vh - var(--header-h));
-    overflow-y: auto;
-    padding: 10px 8px 20px;
+    min-height: 0;
+    overflow: hidden;
+    padding: 0;
+    background: var(--bg-raised);
+    border-right: var(--border-w) solid var(--border);
   }
 
   aside:not(.drawer):not(.open) {
@@ -83,12 +248,12 @@
     left: 0;
     bottom: 0;
     z-index: 30;
-    width: min(280px, calc(100vw - 48px));
+    width: min(320px, calc(100vw - 40px));
     height: auto;
-    padding: 12px 10px 20px;
+    padding: 0;
     background: var(--bg-raised);
     border-right: var(--border-w) solid var(--border);
-    box-shadow: 8px 0 0 var(--border);
+    box-shadow: 6px 0 0 var(--border);
     transform: translateX(-100%);
     visibility: hidden;
     pointer-events: none;
@@ -111,15 +276,18 @@
 
   .head {
     display: flex;
+    flex-shrink: 0;
     align-items: center;
     gap: 6px;
-    margin-bottom: 6px;
-    padding: 0 2px;
+    height: 36px;
+    padding: 0 10px;
+    border-bottom: var(--border-w) solid var(--border);
+    background: var(--bg-panel);
   }
 
   .label {
-    color: var(--fg-faint);
-    font-size: 10px;
+    color: var(--fg);
+    font-size: 11px;
     font-weight: 700;
     letter-spacing: 0.1em;
     text-transform: uppercase;
@@ -128,7 +296,7 @@
   .progress {
     color: var(--fg-faint);
     font-family: var(--font-code);
-    font-size: 10px;
+    font-size: 11px;
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
   }
@@ -166,52 +334,119 @@
     color: var(--fg);
   }
 
-  .hint {
-    margin: 0 0 8px;
-    padding: 0 2px;
-    color: var(--fg-faint);
-    font-size: 10px;
-    font-weight: 500;
-    line-height: 1.35;
+  .toolbar {
+    display: flex;
+    flex-shrink: 0;
+    align-items: stretch;
+    border-bottom: var(--border-w) solid var(--border);
   }
 
-  .checklist {
+  .search {
+    flex: 1;
+    min-width: 0;
+    height: 32px;
     margin: 0;
-    padding: 0;
-    list-style: none;
-    border: var(--border-w) solid var(--border);
-    background: var(--bg-raised);
-    box-shadow: var(--shadow-card);
+    padding: 0 10px;
+    border: 0;
+    border-right: var(--border-w) solid var(--border);
+    border-radius: 0;
+    background: var(--bg-inset);
+    color: var(--fg);
+    font-family: var(--font-code);
+    font-size: 12px;
+    font-weight: 600;
   }
 
-  .check-row {
+  .search::placeholder {
+    color: var(--fg-faint);
+    font-weight: 500;
+  }
+
+  .search:focus {
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
+  }
+
+  .search::-webkit-search-decoration,
+  .search::-webkit-search-cancel-button {
+    -webkit-appearance: none;
+  }
+
+  .mini {
+    flex-shrink: 0;
+    height: 32px;
+    padding: 0 10px;
+    border: 0;
+    border-right: var(--border-w) solid var(--border);
+    background: var(--bg-raised);
+    color: var(--fg);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .mini:last-child {
+    border-right: 0;
+  }
+
+  .mini:hover {
+    background: var(--accent);
+    color: var(--accent-fg);
+  }
+
+  .mini:active {
+    background: var(--accent-hover);
+  }
+
+  .tree {
+    flex: 1;
+    min-height: 0;
+    margin: 0;
+    padding: 4px 0;
+    overflow-y: auto;
+    list-style: none;
+    background: var(--bg-raised);
+  }
+
+  /* One flat row: indent + content. No column borders. */
+  .row {
     display: flex;
     align-items: center;
     gap: 6px;
-    min-height: 32px;
-    padding: 4px 8px;
-    border-bottom: 1px solid color-mix(in srgb, var(--border) 16%, transparent);
+    min-height: 28px;
+    padding: 2px 10px 2px calc(10px + var(--d, 0) * 14px);
   }
 
-  .check-row:last-child {
-    border-bottom: 0;
-  }
-
-  .check-row:hover {
+  .row:hover {
     background: var(--bg-hover);
   }
 
-  .check-row :global(.check) {
-    flex-shrink: 0;
+  .row.dir {
+    margin-top: 4px;
+    min-height: 26px;
   }
 
-  .file-jump {
+  .row.dir:first-child {
+    margin-top: 0;
+  }
+
+  .row.file.viewed {
+    opacity: 0.55;
+  }
+
+  .row.file.viewed:hover {
+    opacity: 1;
+  }
+
+  .main {
     flex: 1;
     display: flex;
     align-items: center;
     gap: 6px;
     min-width: 0;
     min-height: 24px;
+    margin: 0;
     padding: 0;
     border: 0;
     background: transparent;
@@ -220,11 +455,23 @@
     cursor: pointer;
   }
 
-  .file-base {
+  .twist {
+    flex-shrink: 0;
+    width: 12px;
+    color: var(--fg-muted);
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 1;
+  }
+
+  .row.dir .main:hover .twist {
+    color: var(--accent);
+  }
+
+  .name {
     flex: 1;
     min-width: 0;
     overflow: hidden;
-    color: var(--fg);
     font-family: var(--font-code);
     font-size: 12px;
     font-weight: 600;
@@ -232,16 +479,28 @@
     white-space: nowrap;
   }
 
-  .check-row.viewed .file-base {
-    color: var(--fg-faint);
+  .row.dir .name {
+    color: var(--fg-muted);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    text-transform: lowercase;
+  }
+
+  .row.file.viewed .name {
     text-decoration: line-through;
     text-decoration-thickness: 1px;
   }
 
-  .counts {
+  .row :global(.check) {
+    flex-shrink: 0;
+  }
+
+  .meta {
     flex-shrink: 0;
     display: inline-flex;
-    gap: 3px;
+    align-items: center;
+    gap: 5px;
     font-family: var(--font-code);
     font-size: 10px;
     font-variant-numeric: tabular-nums;
@@ -254,5 +513,26 @@
 
   .del {
     color: var(--sev-critical);
+  }
+
+  .status {
+    color: var(--fg-faint);
+    font-weight: 700;
+  }
+
+  .status[data-status="added"] {
+    color: var(--selected);
+  }
+
+  .status[data-status="deleted"] {
+    color: var(--sev-critical);
+  }
+
+  .empty {
+    padding: 20px 12px;
+    color: var(--fg-faint);
+    font-size: 12px;
+    font-weight: 600;
+    text-align: center;
   }
 </style>

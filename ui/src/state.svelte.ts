@@ -411,7 +411,7 @@ export class ReviewState {
     if (details) details.open = true;
     // Center the line so the popover has room above or below; FindingPopover
     // places itself and respects the sticky header offset.
-    const row = anchor.closest("tr") ?? anchor;
+    const row = anchor.closest("tr") ?? anchor.closest("[data-line]") ?? anchor;
     row.scrollIntoView({ behavior: "instant", block: "center" });
   }
 
@@ -423,9 +423,9 @@ export class ReviewState {
     let target: Element | null = null;
     if (comment.jump?.kind === "line") {
       const { hunkId, idx } = comment.jump;
-      target = document.querySelector(
-        `td[data-hunk="${CSS.escape(hunkId)}"][data-idx="${idx}"]`,
-      );
+      target =
+        document.querySelector(`[data-hunk="${CSS.escape(hunkId)}"][data-idx="${idx}"]`) ??
+        document.querySelector(`td[data-hunk="${CSS.escape(hunkId)}"][data-idx="${idx}"]`);
     } else if (comment.jump?.kind === "ctx") {
       target = document.querySelector(`[data-ctx="${CSS.escape(comment.jump.ctx)}"]`);
     } else {
@@ -436,7 +436,7 @@ export class ReviewState {
 
     const details = target.closest("details");
     if (details) details.open = true;
-    const row = target.closest("tr") ?? target;
+    const row = target.closest("tr") ?? target.closest("[data-line]") ?? target;
     row.scrollIntoView({ behavior: "smooth", block: "center" });
     row.classList.add("jump-flash");
     window.setTimeout(() => row.classList.remove("jump-flash"), 900);
@@ -461,7 +461,7 @@ export class ReviewState {
           const l = hunk.lines[idx];
           if (old ? l.oldNo === lineNo : l.newNo === lineNo) {
             return document.querySelector(
-              `td[data-hunk="${CSS.escape(hunk.id)}"][data-idx="${idx}"]`,
+              `[data-hunk="${CSS.escape(hunk.id)}"][data-idx="${idx}"]`,
             );
           }
         }

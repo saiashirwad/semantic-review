@@ -10,21 +10,22 @@
   textarea {
     display: block;
     width: 100%;
-    min-height: 88px;
-    padding: 10px 12px;
+    min-height: 120px;
+    flex: 1;
+    padding: 10px;
     resize: vertical;
-    border: var(--border-w) solid var(--border);
+    border: 0;
+    border-top: 0;
     background: var(--bg-raised);
-    box-shadow: var(--shadow-card);
+    box-shadow: none;
     font-size: var(--fs-sm);
     line-height: 1.45;
     box-sizing: border-box;
   }
 
   textarea:focus {
-    outline: none;
-    border-color: var(--accent);
-    box-shadow: 0 0 0 2px var(--accent-soft);
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
   }
 
   textarea::placeholder {

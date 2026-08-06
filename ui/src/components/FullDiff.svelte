@@ -2,6 +2,7 @@
   import { getReviewState } from "../state.svelte.ts";
   import Check from "./Check.svelte";
   import DiffView from "./DiffView.svelte";
+  import PierreDiff from "./PierreDiff.svelte";
 
   const review = getReviewState();
 </script>
@@ -15,7 +16,11 @@
     </span>
   </h2>
   {#each review.payload.files as file (file.path)}
-    <details data-ctx="Full diff: {file.path}">
+    {@const pierreHtml =
+      review.diffMode === "split"
+        ? (file.pierre?.split || file.pierre?.unified || "")
+        : (file.pierre?.unified || file.pierre?.split || "")}
+    <details data-ctx="Full diff: {file.path}" id="file-{file.path}">
       <summary>
         <span class="chevron">▸</span>
         <span class="path">{file.path}</span>
@@ -32,6 +37,10 @@
       </summary>
       {#if file.status === "binary"}
         <p class="binary">binary file</p>
+      {:else if pierreHtml}
+        <div class="pierre-file">
+          <PierreDiff {file} html={pierreHtml} />
+        </div>
       {:else}
         <div class="hunks">
           {#each file.hunks as hunk (hunk.id)}
@@ -45,8 +54,8 @@
 
 <style>
   section {
-    margin-top: 32px;
-    scroll-margin-top: calc(var(--header-h) + 12px);
+    margin-top: var(--space-4);
+    scroll-margin-top: calc(var(--header-h) + 8px);
   }
 
   h2 {
@@ -85,7 +94,6 @@
     font-weight: 700;
   }
 
-  /* One card per file: summary + hunks share a single border/shadow */
   details {
     margin: 8px 0;
     scroll-margin-top: calc(var(--header-h) + 12px);
@@ -157,7 +165,8 @@
     font-weight: 700;
   }
 
-  .hunks {
+  .hunks,
+  .pierre-file {
     background: var(--bg-code);
   }
 

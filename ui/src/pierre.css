@@ -1,0 +1,263 @@
+/* ─────────────────────────────────────────────────────────────
+ * Pierre @pierre/diffs light-DOM mounts — neobrutalist skin.
+ * Shared core CSS comes from the payload; this file only overrides
+ * chrome so surfaces match our paper/ink design language.
+ * (Plain CSS — no Svelte :global; imported once from PierreDiff.)
+ * ───────────────────────────────────────────────────────────── */
+
+/*
+ * Host must carry Pierre's design tokens (originally on :host). Without
+ * these, grid columns / line heights / bg colors resolve wrong and the
+ * surface looks like a broken empty box with stray line numbers.
+ */
+.pierre-host {
+  position: relative;
+  display: block;
+  overflow: auto;
+  border: 0;
+  background: var(--bg-code, #111111);
+  color: var(--fg-code, #f2ede4);
+  color-scheme: dark;
+  font-family: var(--font-code);
+  font-size: 13px;
+  line-height: 1.5;
+  /* Fallbacks if injected core CSS lags a tick behind first paint */
+  --diffs-font-family: var(--font-code);
+  --diffs-font-size: 13px;
+  --diffs-line-height: 1.5;
+  --diffs-bg: #111111;
+  --diffs-fg: #f2ede4;
+  --diffs-fg-number: color-mix(in srgb, #f2ede4 40%, #111111);
+}
+
+.pierre-host [data-diff] {
+  margin: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: var(--diffs-bg, var(--bg-code)) !important;
+  font-family: var(--font-code) !important;
+  font-size: 13px !important;
+  line-height: 1.5 !important;
+  --diffs-font-family: var(--font-code);
+  --diffs-font-size: 13px;
+  --diffs-line-height: 1.5;
+  width: 100%;
+}
+
+/*
+ * Hard-reset the <code data-code> surface so global chip rules
+ * (padding / border / inline display) can't collapse the grid.
+ *
+ * Unified: Pierre uses display:grid on [data-code].
+ * Split+wrap: Pierre uses display:contents so gutter/content participate
+ * in the parent 4-column grid. Forcing grid here was breaking split.
+ */
+.pierre-host code[data-code],
+.pierre-host [data-code] {
+  font-family: var(--font-code) !important;
+  font-size: 13px !important;
+  line-height: 1.5 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  color: inherit !important;
+  white-space: normal !important;
+  box-shadow: none !important;
+  font-weight: 400 !important;
+}
+
+/* Unified (and any non-split) — keep grid against chip `display:inline` */
+.pierre-host [data-diff]:not([data-diff-type="split"]) code[data-code],
+.pierre-host [data-diff]:not([data-diff-type="split"]) [data-code],
+.pierre-host [data-diff-type="unified"] code[data-code],
+.pierre-host [data-diff-type="unified"] [data-code] {
+  display: grid !important;
+}
+
+/*
+ * Split: children of [data-code] are placed on the parent pre's columns.
+ * Must be contents — grid would nest two independent panes and leave a
+ * black void under unequal sides.
+ */
+.pierre-host [data-diff-type="split"] code[data-code],
+.pierre-host [data-diff-type="split"] [data-code] {
+  display: contents !important;
+}
+
+/* Ensure split parent grid isn't lost to other resets */
+.pierre-host [data-diff-type="split"][data-overflow="wrap"],
+.pierre-host [data-diff-type="split"][data-overflow="scroll"] {
+  display: grid !important;
+  grid-template-columns: repeat(2, var(--diffs-code-grid, minmax(min-content, max-content) 1fr)) !important;
+  width: 100%;
+  min-width: 0;
+}
+
+.pierre-host [data-diff-type="split"] [data-deletions] [data-gutter] {
+  grid-column: 1;
+}
+.pierre-host [data-diff-type="split"] [data-deletions] [data-content] {
+  grid-column: 2;
+  min-width: 0;
+  border-right: 1px solid color-mix(in srgb, var(--fg-code) 12%, transparent);
+}
+.pierre-host [data-diff-type="split"] [data-additions] [data-gutter] {
+  grid-column: 3;
+}
+.pierre-host [data-diff-type="split"] [data-additions] [data-content] {
+  grid-column: 4;
+  min-width: 0;
+}
+
+/* Radius only — never touch display/grid on descendants */
+.pierre-host [data-diff],
+.pierre-host [data-diff] [data-diffs-header],
+.pierre-host [data-diff] [data-separator],
+.pierre-host [data-diff] [data-separator-content] {
+  border-radius: 0 !important;
+}
+
+/* Line tints — quiet wash, not muddy slabs */
+.pierre-host [data-line-type="change-addition"],
+.pierre-host [data-line-type*="addition"] {
+  background: color-mix(in srgb, var(--add-fg) 9%, #111111) !important;
+}
+
+.pierre-host [data-line-type="change-deletion"],
+.pierre-host [data-line-type*="deletion"] {
+  background: color-mix(in srgb, var(--del-fg) 10%, #111111) !important;
+}
+
+.pierre-host [data-line-type="context"],
+.pierre-host [data-line-type*="context"] {
+  background: transparent !important;
+}
+
+/*
+ * Word-level spans: no candy boxes / outlines.
+ * Just a soft wash so changed tokens read without clutter.
+ */
+.pierre-host [data-diff-span] {
+  border-radius: 0 !important;
+  outline: none !important;
+  box-shadow: none !important;
+  padding: 0 1px;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+.pierre-host [data-line-type*="addition"] [data-diff-span] {
+  background: color-mix(in srgb, var(--add-fg) 16%, transparent) !important;
+  color: inherit !important;
+}
+
+.pierre-host [data-line-type*="deletion"] [data-diff-span] {
+  background: color-mix(in srgb, var(--del-fg) 16%, transparent) !important;
+  color: inherit !important;
+}
+
+/* Gutter numbers — quieter */
+.pierre-host [data-column-number],
+.pierre-host [data-line-number-content] {
+  color: color-mix(in srgb, var(--fg-code) 32%, transparent) !important;
+  font-variant-numeric: tabular-nums;
+  font-size: 11px !important;
+  user-select: none;
+}
+
+.pierre-host [data-line-type*="addition"] [data-line-number-content],
+.pierre-host [data-line-type*="addition"][data-column-number] {
+  color: color-mix(in srgb, var(--add-fg) 75%, transparent) !important;
+}
+
+.pierre-host [data-line-type*="deletion"] [data-line-number-content],
+.pierre-host [data-line-type*="deletion"][data-column-number] {
+  color: color-mix(in srgb, var(--del-fg) 75%, transparent) !important;
+}
+
+/* Content padding so code isn't glued to the edge */
+.pierre-host [data-content] [data-line],
+.pierre-host [data-line-content] {
+  padding-inline: 12px 16px !important;
+}
+
+.pierre-host [data-separator],
+.pierre-host [data-hunk-separator] {
+  background: #0a0a0a !important;
+  color: color-mix(in srgb, var(--fg-code) 55%, transparent) !important;
+  border-block: 1px solid color-mix(in srgb, var(--fg-code) 14%, transparent) !important;
+  font-family: var(--font-code) !important;
+  font-size: var(--fs-xs) !important;
+  font-weight: 600 !important;
+}
+
+.pierre-host [data-line].jump-flash,
+.pierre-host [data-column-number].jump-flash {
+  animation: jump-flash 0.9s ease-out;
+}
+
+.pierre-host [data-line].flagged {
+  box-shadow: inset 3px 0 0 var(--sev-major);
+}
+
+.pierre-host [data-content] [data-line] {
+  scroll-margin-top: calc(var(--header-h) + 12px);
+  scroll-margin-bottom: 12px;
+}
+
+/* Comment + : only the hovered line (not the whole gutter column). */
+.pierre-host .pd-comment {
+  position: absolute;
+  left: 2px;
+  top: 50%;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  transform: translateY(-50%);
+  border: 1px solid var(--border);
+  background: var(--accent);
+  color: var(--accent-fg);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.pierre-host [data-column-number]:hover > .pd-comment,
+.pierre-host .pd-comment:focus-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.pierre-host [data-column-number]:has(.pd-flag) > .pd-comment {
+  display: none;
+}
+
+.pierre-host .pd-flag {
+  position: absolute;
+  left: 2px;
+  z-index: 3;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border: 1px solid var(--sev-major);
+  background: var(--sev-major);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 14px;
+  cursor: pointer;
+}
+
+.pierre-host .pd-flag:hover {
+  filter: brightness(1.1);
+}
+
+/* Excerpts: out-of-range nodes are removed in PierreDiff (not display:none). */

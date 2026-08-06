@@ -29,12 +29,17 @@
     let node: Node | null = sel.focusNode ?? sel.anchorNode;
     if (node && node.nodeType === Node.TEXT_NODE) node = node.parentElement;
     const el = node as Element | null;
-    const td = el?.closest?.("td[data-hunk][data-idx]") as HTMLElement | null;
+    // Legacy table cells or Pierre light-DOM lines (data-hunk + data-idx from PierreDiff)
+    const lineEl = el?.closest?.("[data-hunk][data-idx]") as HTMLElement | null;
     const section = el?.closest?.("[data-ctx]") as HTMLElement | null;
 
-    const table = td?.closest("table");
-    const cells = table
-      ? [...table.querySelectorAll<HTMLElement>("td[data-hunk][data-idx]")].filter((cell) =>
+    const scope =
+      lineEl?.closest("table") ??
+      lineEl?.closest(".pierre-host") ??
+      lineEl?.closest("[data-diff]") ??
+      null;
+    const cells = scope
+      ? [...scope.querySelectorAll<HTMLElement>("[data-hunk][data-idx]")].filter((cell) =>
           range.intersectsNode(cell),
         )
       : [];
@@ -58,9 +63,9 @@
       };
     }
 
-    if (td) {
-      const hunkId = td.dataset.hunk!;
-      const idx = Number(td.dataset.idx);
+    if (lineEl) {
+      const hunkId = lineEl.dataset.hunk!;
+      const idx = Number(lineEl.dataset.idx);
       return {
         quote: sel.toString().trim(),
         ref: review.refForLine(hunkId, idx),

@@ -31,8 +31,8 @@
 
 <style>
   .notes {
-    margin-top: var(--space-6);
-    padding: var(--space-4) var(--space-5);
+    margin-top: var(--space-3);
+    padding: var(--space-3) var(--space-4);
     border: var(--border-w) solid var(--border);
     background: var(--bg-raised);
     box-shadow: var(--shadow-card);

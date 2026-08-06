@@ -251,8 +251,14 @@ html {
   background: var(--bg);
 }
 
+html,
 body {
   margin: 0;
+  width: 100%;
+  min-height: 100%;
+}
+
+body {
   min-height: 100vh;
   background: var(--bg);
   color: var(--fg);
@@ -264,6 +270,12 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
+}
+
+/* Full-bleed app shell — no page gutter */
+#app {
+  width: 100%;
+  min-height: 100vh;
 }
 
 button,
@@ -318,10 +330,11 @@ button {
   }
 }
 
-/* Inline code — dark chip matching code windows, not light paper.
-   Horizontal margin only so line rhythm stays even; vertical air
-   comes from --lh-prose on surrounding copy. */
-code {
+/* Inline code chips in prose — not Pierre <code data-code> surfaces.
+   Unlayered `code {}` would beat Pierre's @layer base { display:grid }
+   and collapse the whole diff layout. */
+:where(p, li, td, th, dd, blockquote, h1, h2, h3, h4, h5, h6, label, span, .prose, .tldr-body, .note-body, .intro) > code,
+:where(p, li, td, th, dd, blockquote, .prose, .tldr-body, .note-body, .intro) code:not([data-code]) {
   display: inline;
   padding: 0.12em 0.32em;
   margin: 0 0.1em;

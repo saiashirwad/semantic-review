@@ -450,6 +450,151 @@ index 0000000..1111111 100644
  ## Usage
  
  \`\`\`ts
+diff --git a/packages/http/src/internal/retry/jitter.ts b/packages/http/src/internal/retry/jitter.ts
+new file mode 100644
+index 0000000..1111111
+--- /dev/null
++++ b/packages/http/src/internal/retry/jitter.ts
+@@ -0,0 +1,12 @@
++/** Full jitter in [0, cap]. */
++export function fullJitter(cap: number): number {
++  if (cap <= 0) return 0;
++  return Math.floor(Math.random() * cap);
++}
++
++/** Decorrelated jitter step (AWS-style). */
++export function decorrelated(prev: number, base: number, cap: number): number {
++  const next = Math.floor(base + Math.random() * prev * 3);
++  return Math.min(cap, next);
++}
+diff --git a/packages/http/src/internal/retry/policy.ts b/packages/http/src/internal/retry/policy.ts
+new file mode 100644
+index 0000000..1111111
+--- /dev/null
++++ b/packages/http/src/internal/retry/policy.ts
+@@ -0,0 +1,14 @@
++export type RetryPolicy = {
++  tries: number;
++  baseDelayMs: number;
++  maxDelayMs: number;
++  timeoutMs: number;
++};
++
++export const DEFAULT_POLICY: RetryPolicy = {
++  tries: 3,
++  baseDelayMs: 100,
++  maxDelayMs: 2_000,
++  timeoutMs: 10_000,
++};
+diff --git a/packages/http/src/client/adapters/fetch.ts b/packages/http/src/client/adapters/fetch.ts
+new file mode 100644
+index 0000000..1111111
+--- /dev/null
++++ b/packages/http/src/client/adapters/fetch.ts
+@@ -0,0 +1,16 @@
++import type { RetryPolicy } from "../../internal/retry/policy";
++import { fullJitter } from "../../internal/retry/jitter";
++
++export async function fetchWithRetry(
++  input: RequestInfo,
++  init: RequestInit | undefined,
++  policy: RetryPolicy,
++): Promise<Response> {
++  let last: unknown;
++  for (let i = 0; i < policy.tries; i++) {
++    try {
++      return await fetch(input, init);
++    } catch (err) {
++      last = err;
++      if (i === policy.tries - 1) break;
++      await new Promise((r) => setTimeout(r, fullJitter(policy.baseDelayMs * 2 ** i)));
++    }
++  }
++  throw last;
++}
+diff --git a/packages/http/src/client/adapters/node-http.ts b/packages/http/src/client/adapters/node-http.ts
+new file mode 100644
+index 0000000..1111111
+--- /dev/null
++++ b/packages/http/src/client/adapters/node-http.ts
+@@ -0,0 +1,8 @@
++/** Node http adapter stub — packages tree depth fixture. */
++export function createNodeAdapter() {
++  return {
++    kind: "node-http" as const,
++    request: async () => {
++      throw new Error("not implemented in fixture");
++    },
++  };
++}
+diff --git a/apps/api/src/routes/v1/users/handlers.ts b/apps/api/src/routes/v1/users/handlers.ts
+new file mode 100644
+index 0000000..1111111
+--- /dev/null
++++ b/apps/api/src/routes/v1/users/handlers.ts
+@@ -0,0 +1,11 @@
++import type { RetryPolicy } from "../../../../../../packages/http/src/internal/retry/policy";
++
++export async function listUsers(policy: RetryPolicy) {
++  // deep path fixture for the files tree
++  return { users: [], policy };
++}
++
++export async function getUser(id: string) {
++  return { id, name: "fixture" };
++}
+diff --git a/apps/api/src/routes/v1/users/schema.ts b/apps/api/src/routes/v1/users/schema.ts
+new file mode 100644
+index 0000000..1111111
+--- /dev/null
++++ b/apps/api/src/routes/v1/users/schema.ts
+@@ -0,0 +1,6 @@
++export type User = {
++  id: string;
++  name: string;
++  email?: string;
++};
+diff --git a/apps/api/src/middleware/auth/session.ts b/apps/api/src/middleware/auth/session.ts
+new file mode 100644
+index 0000000..1111111
+--- /dev/null
++++ b/apps/api/src/middleware/auth/session.ts
+@@ -0,0 +1,10 @@
++export type Session = {
++  userId: string;
++  expiresAt: number;
++};
++
++export function isExpired(session: Session, now = Date.now()): boolean {
++  return session.expiresAt <= now;
++}
+diff --git a/apps/api/src/middleware/auth/tokens/refresh.ts b/apps/api/src/middleware/auth/tokens/refresh.ts
+new file mode 100644
+index 0000000..1111111
+--- /dev/null
++++ b/apps/api/src/middleware/auth/tokens/refresh.ts
+@@ -0,0 +1,9 @@
++/** Nested under middleware/auth/tokens — depth fixture. */
++export function rotateRefreshToken(old: string): string {
++  return \`rotated:\${old}\`;
++}
+diff --git a/vendor/legacy/lib/utils/deep/nested/helper.ts b/vendor/legacy/lib/utils/deep/nested/helper.ts
+new file mode 100644
+index 0000000..1111111
+--- /dev/null
++++ b/vendor/legacy/lib/utils/deep/nested/helper.ts
+@@ -0,0 +1,7 @@
++/** Intentionally deep path for files-tree UI fixture. */
++export function deepIdentity<T>(value: T): T {
++  return value;
++}
+diff --git a/vendor/legacy/lib/utils/deep/nested/more/stuff.ts b/vendor/legacy/lib/utils/deep/nested/more/stuff.ts
+new file mode 100644
+index 0000000..1111111
+--- /dev/null
++++ b/vendor/legacy/lib/utils/deep/nested/more/stuff.ts
+@@ -0,0 +1,5 @@
++export const DEEP_FIXTURE_FLAG = true;
 `;
 
 const analysis: Analysis = {

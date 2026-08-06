@@ -107,8 +107,9 @@
     display: flex;
     align-items: center;
     gap: 10px;
+    width: 100%;
     min-height: 48px;
-    padding: 0 16px;
+    padding: 0 12px;
     border-bottom: var(--border-w) solid var(--border);
     background: var(--bg-raised);
   }
