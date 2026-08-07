@@ -7,6 +7,33 @@
   const review = getReviewState();
 
   let findingsOpen = $state(true);
+  let copied = $state(false);
+  let copyTimer: ReturnType<typeof setTimeout> | null = null;
+
+  async function copyFindings(e: MouseEvent) {
+    e.stopPropagation();
+    const open = review.sortedFindings.filter(({ key }) => review.isFindingOpen(key));
+    const text = open
+      .map(({ finding }) => {
+        const lines = [`[${finding.severity}] ${finding.title} — ${review.refForFinding(finding)}`, finding.body];
+        if (finding.recommendation.trim()) lines.push(`Fix: ${finding.recommendation}`);
+        return lines.join("\n");
+      })
+      .join("\n\n");
+    try {
+      await navigator.clipboard.writeText(text);
+      copied = true;
+      if (copyTimer) clearTimeout(copyTimer);
+      copyTimer = setTimeout(() => (copied = false), 1200);
+    } catch {
+      /* clipboard unavailable — leave the button as-is */
+    }
+  }
+
+  function jumpToNotes() {
+    review.closeDrawers();
+    document.querySelector('[data-ctx="Agent\'s notes"]')?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
 </script>
 
 <aside
@@ -35,6 +62,19 @@
         <button class="findings-head" onclick={() => (findingsOpen = !findingsOpen)}>
           <span class="count-badge">{review.openFindingCount}</span>
           <span class="count-label">Findings</span>
+          <span
+            role="button"
+            tabindex="0"
+            class="copy-btn"
+            class:copied
+            title="Copy open findings as text"
+            onclick={copyFindings}
+            onkeydown={(e) => {
+              if (e.key === "Enter" || e.key === " ") copyFindings(e as unknown as MouseEvent);
+            }}
+          >
+            {copied ? "✓" : "Copy"}
+          </span>
           <span class="chevron" class:open={findingsOpen}>▸</span>
         </button>
         {#if findingsOpen}
@@ -45,6 +85,13 @@
           </div>
         {/if}
       </div>
+    {/if}
+    {#if review.analysis.notes.length > 0}
+      <button type="button" class="notes-row" title="Jump to the agent's notes" onclick={jumpToNotes}>
+        <span class="notes-badge">{review.analysis.notes.length}</span>
+        <span class="notes-label">Notes</span>
+        <span class="notes-arrow">↓</span>
+      </button>
     {/if}
     <h3>Comments</h3>
     <CommentsList />
@@ -241,6 +288,78 @@
 
   .findings-list {
     border-top: var(--border-w) solid var(--border);
+  }
+
+  .copy-btn {
+    flex-shrink: 0;
+    padding: 1px 7px;
+    border: 1px solid var(--border);
+    background: var(--bg-raised);
+    color: var(--fg-muted);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    cursor: pointer;
+  }
+
+  .copy-btn:hover {
+    background: var(--bg-hover);
+    color: var(--fg);
+  }
+
+  .copy-btn.copied {
+    background: var(--selected);
+    border-color: var(--selected);
+    color: #fff;
+  }
+
+  /* Flags-style row surfacing the agent's notes buried in main */
+  .notes-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    height: 32px;
+    padding: 0 10px;
+    border: 0;
+    border-bottom: var(--border-w) solid var(--border);
+    background: var(--bg-panel);
+    cursor: pointer;
+  }
+
+  .notes-row:hover {
+    background: var(--bg-hover);
+  }
+
+  .notes-badge {
+    min-width: 20px;
+    padding: 0 5px;
+    border: var(--border-w) solid var(--border);
+    background: var(--sev-info);
+    color: #fff;
+    font-size: var(--fs-xs);
+    font-weight: 700;
+    line-height: 16px;
+    text-align: center;
+  }
+
+  .notes-label {
+    flex: 1;
+    font-size: var(--fs-sm);
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    text-align: left;
+  }
+
+  .notes-arrow {
+    color: var(--fg-faint);
+    font-size: var(--fs-sm);
+  }
+
+  .notes-row:hover .notes-arrow {
+    color: var(--accent);
   }
 
   h3 {

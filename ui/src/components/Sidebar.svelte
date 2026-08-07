@@ -26,6 +26,33 @@
     }),
   );
 
+  /** Per-section weight: files touched and +/− lines across its hunks. */
+  const sectionStats = $derived(
+    review.analysis.sections.map((_, i) => {
+      let adds = 0;
+      let dels = 0;
+      for (const id of sectionHunkIds(i)) {
+        const entry = review.hunkIndex.get(id);
+        if (!entry) continue;
+        for (const line of entry.hunk.lines) {
+          if (line.kind === "add") adds++;
+          else if (line.kind === "del") dels++;
+        }
+      }
+      return { files: sectionFiles[i].length, adds, dels };
+    }),
+  );
+
+  /** Section fully viewed = every one of its hunks marked viewed. */
+  const sectionViewed = $derived(
+    review.analysis.sections.map((_, i) => {
+      const hunks = sectionHunkIds(i);
+      if (hunks.size === 0) return false;
+      for (const id of hunks) if (!review.viewedHunks.has(id)) return false;
+      return true;
+    }),
+  );
+
   const sectionFindingCounts = $derived(
     review.analysis.sections.map((_, i) => {
       const hunks = sectionHunkIds(i);
@@ -183,11 +210,20 @@
             aria-current={active ? "true" : undefined}
             onclick={() => jump(id)}
           >
-            <span class="num" aria-hidden="true">{i + 1}</span>
+            <span class="num" class:done={sectionViewed[i]} aria-hidden="true">
+              {#if sectionViewed[i]}✓{:else}{i + 1}{/if}
+            </span>
             <span class="step-text">
               <span class="step-heading">{section.heading}</span>
               {#if section.deck}
                 <span class="step-deck">{section.deck}</span>
+              {/if}
+              {#if sectionStats[i].adds + sectionStats[i].dels > 0}
+                <span class="step-stats">
+                  {sectionStats[i].files} file{sectionStats[i].files === 1 ? "" : "s"} ·
+                  <b class="add">+{sectionStats[i].adds}</b>
+                  <b class="del">−{sectionStats[i].dels}</b>
+                </span>
               {/if}
             </span>
           </button>
@@ -435,6 +471,29 @@
     color: color-mix(in srgb, var(--bg-raised) 72%, transparent);
   }
 
+  /* Section weight — reviewer sees the monster section before scrolling */
+  .step-stats {
+    display: block;
+    margin-top: 2px;
+    color: var(--fg-faint);
+    font-family: var(--font-code);
+    font-size: 10px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .step-stats .add {
+    color: var(--selected);
+  }
+
+  .step-stats .del {
+    color: var(--sev-critical);
+  }
+
+  .step-btn.active .step-stats {
+    color: color-mix(in srgb, var(--bg-raised) 60%, transparent);
+  }
+
   .num {
     flex-shrink: 0;
     margin-top: 1px;
@@ -451,11 +510,23 @@
     line-height: 1;
   }
 
+  /* Fully-viewed section — the chapter is done */
+  .num.done {
+    background: var(--selected);
+    border-color: var(--border);
+    color: #fff;
+  }
+
   .step-btn.active .num {
     background: var(--accent);
     border-color: var(--accent);
     color: #fff;
     box-shadow: none;
+  }
+
+  .step-btn.active .num.done {
+    background: var(--selected);
+    border-color: var(--selected);
   }
 
   .badge {

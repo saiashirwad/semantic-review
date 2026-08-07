@@ -29,6 +29,19 @@ export interface PayloadFile {
   hunks: PayloadHunk[];
   /** Full-file Pierre SSR (all hunks). Prefer this in Full diff. */
   pierre?: { unified: string; split: string };
+  /** New-file contents (context expansion between/around hunks). Backend fills
+      from `git show`; absent = expansion unavailable for this file. */
+  fullText?: string;
+}
+
+/** Change metadata for the masthead. Backend fills from git; all optional. */
+export interface ChangeMeta {
+  /** Branch under review, e.g. "texoport/retry-backoff". */
+  headRef?: string;
+  /** Merge target, e.g. "main". */
+  baseRef?: string;
+  /** Issue/ticket labels from the commit message, e.g. ["Fixes #1234"]. */
+  linked?: string[];
 }
 
 export interface PayloadResult {
@@ -53,6 +66,7 @@ export interface ReviewPayload {
   results: PayloadResult[];
   files: PayloadFile[];
   pierre?: PierrePayload;
+  meta?: ChangeMeta;
 }
 
 function renderDiagram(source: string): string {
@@ -91,6 +105,7 @@ export async function buildReviewPayload(
   results: AnalysisResult[],
   files: DiffFile[],
   mode: ReviewPayload["mode"],
+  extras: { meta?: ChangeMeta; fileTexts?: Record<string, string> } = {},
 ): Promise<ReviewPayload> {
   // Bind once at the shell boundary so every entry path (CLI, evals HTML,
   // --analysis, vite fixture) drops invented hunk ids before the UI sees them.
@@ -108,6 +123,7 @@ export async function buildReviewPayload(
       status: file.status,
       adds: file.hunks.reduce((n, h) => n + h.lines.filter((l) => l.kind === "add").length, 0),
       dels: file.hunks.reduce((n, h) => n + h.lines.filter((l) => l.kind === "del").length, 0),
+      fullText: extras.fileTexts?.[file.path],
       hunks: file.hunks.map((hunk) => ({
         id: hunk.id,
         header: hunk.header,
@@ -135,5 +151,6 @@ export async function buildReviewPayload(
     results: payloadResults,
     files: payloadFiles,
     pierre: pierre.css ? { css: pierre.css } : undefined,
+    meta: extras.meta,
   };
 }

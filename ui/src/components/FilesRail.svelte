@@ -190,13 +190,19 @@
         </li>
       {:else}
         {@const viewed = review.fileViewed(row.file)}
+        {@const note = review.fileNotes.get(row.file.path)}
         <li class="row file" class:viewed style:--d={row.depth}>
           <Check
             checked={viewed}
             ariaLabel={viewed ? `Unmark ${row.file.path} as viewed` : `Mark ${row.file.path} as viewed`}
             onchange={() => review.setFileViewed(row.file, !viewed)}
           />
-          <button type="button" class="main" title={row.file.path} onclick={() => onJump(row.file)}>
+          <button
+            type="button"
+            class="main"
+            title={note ? `${row.file.path} — ${note}` : row.file.path}
+            onclick={() => onJump(row.file)}
+          >
             <span class="name">{row.name}</span>
             <span class="meta" aria-hidden="true">
               {#if row.file.adds > 0}<b class="add">+{row.file.adds}</b>{/if}

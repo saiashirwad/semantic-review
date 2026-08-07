@@ -20,6 +20,7 @@
       review.diffMode === "split"
         ? (file.pierre?.split || file.pierre?.unified || "")
         : (file.pierre?.unified || file.pierre?.split || "")}
+    {@const note = review.fileNotes.get(file.path)}
     <details data-ctx="Full diff: {file.path}" id="file-{file.path}">
       <summary>
         <span class="chevron">▸</span>
@@ -35,6 +36,9 @@
           onchange={(v) => review.setFileViewed(file, v)}
         />
       </summary>
+      {#if note}
+        <p class="file-note">{note}</p>
+      {/if}
       {#if file.status === "binary"}
         <p class="binary">binary file</p>
       {:else if pierreHtml}
@@ -111,6 +115,18 @@
     background: var(--bg-raised);
     box-shadow: var(--shadow-card);
     overflow: hidden;
+  }
+
+  /* Agent's one-liner for this file — under the header, above the diff */
+  .file-note {
+    margin: 0;
+    padding: 5px 12px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-panel);
+    color: var(--fg-muted);
+    font-size: var(--fs-xs);
+    font-weight: 500;
+    line-height: 1.4;
   }
 
   summary {

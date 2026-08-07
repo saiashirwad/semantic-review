@@ -13,12 +13,20 @@
 
   const { section, index, svg }: Props = $props();
   const review = getReviewState();
+
+  const sectionHunks = $derived([...new Set(section.snippets.map((s) => s.hunk_id))]);
+  const viewedCount = $derived(sectionHunks.filter((id) => review.viewedHunks.has(id)).length);
 </script>
 
 <section id="section-{index}" data-ctx={section.heading}>
   <h2>
     <span class="num">{String(index + 1).padStart(2, "0")}</span>
     {section.heading}
+    {#if sectionHunks.length > 0}
+      <span class="sec-progress" class:done={viewedCount === sectionHunks.length} title="Hunks in this section marked viewed">
+        {viewedCount}/{sectionHunks.length} viewed
+      </span>
+    {/if}
   </h2>
   <div class="intro"><Prose text={section.intro} /></div>
   <Diagram {svg} source={section.diagram} />
@@ -89,6 +97,21 @@
     line-height: 1;
     letter-spacing: 0.02em;
     box-shadow: var(--shadow-btn);
+  }
+
+  /* Per-section countdown — chapter-scoped twin of the header's lines-left */
+  .sec-progress {
+    flex-shrink: 0;
+    margin-left: auto;
+    color: var(--fg-faint);
+    font-family: var(--font-code);
+    font-size: var(--fs-xs);
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+  }
+
+  .sec-progress.done {
+    color: var(--selected);
   }
 
   .intro {

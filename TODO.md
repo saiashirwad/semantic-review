@@ -342,3 +342,59 @@ the canonical list everywhere.*
 - [x] Acceptance: toggle flips instantly (one frame, no transition), diffs and
   diagrams flip with the chrome, choice survives reload, removing the stored key
   reverts to OS-following.
+
+---
+
+# Backend phase — fill the data the UI already renders
+
+The UI and dev fixtures (`ui/dev/data.ts`) now carry three payload/schema
+extensions that the CLI backend does not populate yet. The fixture is the
+contract; wire the real sources.
+
+## 12. Change metadata in the masthead
+
+The masthead renders `payload.meta` (`ChangeMeta` in `src/payload.ts`):
+`headRef → baseRef` chip and `linked` issue labels. Fixture: `META` in
+`ui/dev/data.ts`.
+
+- [ ] In the CLI path (`src/git.ts` / wherever the diff is produced), resolve
+  `headRef` (`git rev-parse --abbrev-ref HEAD`) and `baseRef` (the ref the diff
+  was taken against — already known when `--base` style flags are used; omit
+  when reviewing stdin diffs).
+- [ ] Scan commit messages in the range for issue refs (`Fixes #\d+`,
+  `Closes #\d+`, bare `#\d+`) → `meta.linked` labels. Labels only — no URLs;
+  the report must stay offline.
+- [ ] Pass `{ meta }` as the fourth arg to `buildReviewPayload`. Stdin-diff
+  mode simply omits it; the masthead hides the chip when absent.
+
+## 13. Per-file explanations (`file_notes`)
+
+`AnalysisSchema.file_notes` (path + one-line note) already flows: prompt asks
+for it, lenient input defaults it, the UI shows notes in FullDiff file headers
+and FilesRail tooltips. Fixture: `file_notes` in `ui/dev/data.ts`.
+
+- [ ] Nothing backend-side to build — the model produces it via the prompt.
+  Verify API backends' generated JSON schema includes `file_notes` (it should,
+  from zod) and run `bun run eval` to eyeball note quality on fixture diffs.
+- [ ] Consider a structural eval check: every `file_notes.path` must exist in
+  the diff (mirror the `bindAnalysis` hunk-id treatment: drop unknown paths at
+  the payload boundary).
+
+## 14. Context expansion in diffs (the big one)
+
+Devin-style `↕ n lines / all lines` expanders between hunks. The payload
+already has the slot: `PayloadFile.fullText` (new-file contents), filled via
+`buildReviewPayload(..., { fileTexts })`. Fixture ships `FILE_TEXTS` for
+`src/retry.ts`.
+
+- [ ] Backend: for each non-binary changed file, `git show <head>:<path>` →
+  `fileTexts[path]`. Cap per-file size (say 200 KB) and total payload growth;
+  skip files over the cap — expansion is progressive enhancement.
+- [ ] UI: in `DiffView`/`PierreDiff`, where consecutive hunks skip lines,
+  render a hard expander row (`↕ 12 lines`) when `file.fullText` is present.
+  Clicking splices the skipped lines in as context rows. Plain text rendering
+  is acceptable for expanded context (no Pierre re-highlight) — mark rows
+  `kind: "context"` styling.
+- [ ] Watch the offline size budget: `fullText` for a big PR can dwarf the
+  diff. Measure on the fixture before enabling by default; consider
+  `--expand-context` opt-in if exports balloon.

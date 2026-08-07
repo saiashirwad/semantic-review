@@ -180,7 +180,15 @@
           <div class="rule thin"></div>
         </div>
         <p class="mast-stats">
+          {#if payload.meta?.headRef && payload.meta?.baseRef}
+            <span class="mast-refs">{payload.meta.headRef} → {payload.meta.baseRef}</span>
+            <span class="mast-sep">·</span>
+          {/if}
           +{stats.added} −{stats.removed} · {payload.files.length} files · {review.hunkOrder.length} hunks
+          {#if payload.meta?.linked?.length}
+            <span class="mast-sep">·</span>
+            <span class="mast-linked">{payload.meta.linked.join(" · ")}</span>
+          {/if}
         </p>
       </div>
       <div class="tldr" data-ctx="TL;DR">
@@ -320,6 +328,22 @@
     font-family: var(--font-code);
     font-size: var(--fs-sm);
     font-variant-numeric: tabular-nums;
+  }
+
+  .mast-refs {
+    padding: 1px 6px;
+    border: 1px solid var(--border);
+    background: var(--bg-inset);
+    font-weight: 600;
+  }
+
+  .mast-sep {
+    color: var(--fg-faint);
+  }
+
+  .mast-linked {
+    color: var(--accent);
+    font-weight: 600;
   }
 
   .tldr {

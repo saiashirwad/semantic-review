@@ -31,12 +31,20 @@ export const SectionSchema = z.object({
   ),
 });
 
+// One-line explanation per significant file, shown in the file checklist and
+// full-diff headers. Mechanical files may be omitted.
+export const FileNoteSchema = z.object({
+  path: z.string(),
+  note: z.string(),
+});
+
 export const AnalysisSchema = z.object({
   title: z.string(),
   summary: z.string(),
   diagram: z.string(),
   sections: z.array(SectionSchema),
   findings: z.array(FindingSchema),
+  file_notes: z.array(FileNoteSchema),
   notes: z.array(z.string()),
 });
 
@@ -47,6 +55,7 @@ export type Analysis = z.infer<typeof AnalysisSchema>;
 export const AnalysisInputSchema = AnalysisSchema.extend({
   findings: z.array(FindingSchema).default([]),
   sections: z.array(SectionSchema.extend({ deck: z.string().default("") })),
+  file_notes: z.array(FileNoteSchema).default([]),
 });
 
 // One analysis per backend; the report renders a tab per result.
@@ -80,6 +89,9 @@ Produce a JSON object with exactly this shape:
   "findings": [
     { "title": "short defect title", "severity": "critical|major|minor|info", "hunk_id": "h3", "line": 42, "body": "what is wrong and why", "recommendation": "concrete fix, or \\"\\"" }
   ],
+  "file_notes": [
+    { "path": "src/retry.ts", "note": "one line: what changed in this file" }
+  ],
   "notes": ["risks or things a reviewer should double-check", ...]
 }
 
@@ -94,6 +106,7 @@ Rules:
 - "findings" is for concrete defects in the change: bugs, regressions, missing error handling, security issues. Not style nits, and not restatements of notes. Empty array when the change looks correct — most changes have none.
 - Finding severity: critical = likely breaks behavior or security; major = probable bug or footgun; minor = worth fixing, not urgent; info = observation worth a look.
 - Finding "line" uses the same numbers as snippets: the new-file number, or the old-file number NEGATED for a deleted line ("-17|-code" → -17), or null to flag the whole hunk. "body" says what is wrong and why; "recommendation" gives the concrete fix ("" if none).
+- "file_notes": one plain-text line per file saying what changed there, shown next to the filename in the file checklist. Cover every file that carries meaning; skip purely mechanical files (lockfiles, formatting). Empty array is fine for tiny changes.
 - "notes" is for behavior changes, missing tests, edge cases, inconsistencies. Empty array if none.
 - Respond with ONLY the JSON object, no fences, no commentary.
 

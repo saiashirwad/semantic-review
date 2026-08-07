@@ -10,12 +10,15 @@ function devServer(): Plugin {
     name: "semantic-review-dev-server",
     configureServer(server) {
       server.middlewares.use("/dev/payload.json", async (_req, res) => {
-        const [{ parseDiff }, { buildReviewPayload }, { DIFF, ANALYSES }] = await Promise.all([
+        const [{ parseDiff }, { buildReviewPayload }, { DIFF, ANALYSES, META, FILE_TEXTS }] = await Promise.all([
           import("../src/diff.ts"),
           import("../src/payload.ts"),
           import("./dev/data.ts"),
         ]);
-        const payload = await buildReviewPayload(ANALYSES, parseDiff(DIFF), "server");
+        const payload = await buildReviewPayload(ANALYSES, parseDiff(DIFF), "server", {
+          meta: META,
+          fileTexts: FILE_TEXTS,
+        });
         res.setHeader("Content-Type", "application/json");
         res.end(JSON.stringify(payload));
       });

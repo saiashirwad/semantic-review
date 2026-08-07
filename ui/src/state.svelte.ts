@@ -326,6 +326,15 @@ export class ReviewState {
     return index;
   }
 
+  /** Active analysis's per-file one-liners (path → note). */
+  get fileNotes(): Map<string, string> {
+    const map = new Map<string, string>();
+    for (const fn of this.analysis.file_notes) {
+      if (fn.note.trim()) map.set(fn.path, fn.note);
+    }
+    return map;
+  }
+
   get openFindingCount() {
     return this.sortedFindings.filter(({ key }) => this.isFindingOpen(key)).length;
   }

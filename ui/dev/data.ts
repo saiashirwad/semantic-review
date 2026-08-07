@@ -786,6 +786,16 @@ const analysis: Analysis = {
       recommendation: "Add a test that aborts mid-flight and asserts no further tries are scheduled.",
     },
   ],
+  file_notes: [
+    { path: "src/retry.ts", note: "New module: withRetry loop, backoffMs jitter, default retry predicate, sleep" },
+    { path: "src/config.ts", note: "RetryPolicy type, DEFAULT_RETRY, resolveRetry; ClientConfig grows optional retry" },
+    { path: "src/fetch.ts", note: "fetchJson rewired through withRetry; new fetchText twin shares the path" },
+    { path: "src/client.ts", note: "ApiClient records attempts per request and clears the log on 401" },
+    { path: "src/index.ts", note: "Barrel re-exports retry symbols; getJson alias kept (deprecated)" },
+    { path: "test/fetch.test.ts", note: "Adds no-retry-on-404 and retry-on-503 coverage with zeroed delays" },
+    { path: "test/retry.test.ts", note: "New unit tests: backoff bounds, predicate table, exhaustion, sleep" },
+    { path: "README.md", note: "Documents RetryPolicy defaults table and hook examples" },
+  ],
   notes: [
     "Worst-case delay before failure is roughly sum of full-jitter caps (not base*2^i). With defaults, expect up to ~3s of sleep plus 3× timeoutMs if every try hangs until abort.",
     "Full jitter is correct for multi-tenant clients; if you need strictly increasing delays for a single interactive tool, consider decorrelated jitter instead.",
@@ -797,3 +807,22 @@ const analysis: Analysis = {
 export const ANALYSES: { backend: string; analysis: Analysis }[] = [
   { backend: "analysis", analysis },
 ];
+
+/** Masthead metadata — backend will fill this from git (branches, issue refs). */
+export const META = {
+  headRef: "texoport/retry-backoff",
+  baseRef: "main",
+  linked: ["Fixes #1234"],
+};
+
+/**
+ * New-file contents for context expansion (backend will fill from `git show`).
+ * Only files worth expanding need entries; this fixture ships one example.
+ */
+export const FILE_TEXTS: Record<string, string> = {
+  "src/retry.ts": DIFF.split("+++ b/src/config.ts")[0]
+    .split("\n")
+    .filter((l) => l.startsWith("+") && !l.startsWith("+++"))
+    .map((l) => l.slice(1))
+    .join("\n"),
+};
