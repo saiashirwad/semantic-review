@@ -68,6 +68,25 @@
     return new Set(review.analysis.sections[sectionIndex]?.snippets.map((s) => s.hunk_id) ?? []);
   }
 
+  /** One file's weight and viewed-ness within a section's hunks only. */
+  function sectionFileStats(sectionIndex: number, path: string) {
+    let adds = 0;
+    let dels = 0;
+    let viewed = true;
+    let any = false;
+    for (const id of sectionHunkIds(sectionIndex)) {
+      const entry = review.hunkIndex.get(id);
+      if (!entry || entry.file.path !== path) continue;
+      any = true;
+      if (!review.viewedHunks.has(id)) viewed = false;
+      for (const line of entry.hunk.lines) {
+        if (line.kind === "add") adds++;
+        else if (line.kind === "del") dels++;
+      }
+    }
+    return { adds, dels, viewed: any && viewed };
+  }
+
   /** Set active step and hold it until programmatic scroll settles. */
   function selectStep(id: string) {
     activeId = id;
@@ -244,7 +263,9 @@
           <ul class="meta">
             {#each sectionFiles[i] as path}
               {@const n = review.openFindingsFor(path, hunks).length}
+              {@const fs = sectionFileStats(i, path)}
               <li>
+                <span class="tick" class:done={fs.viewed} aria-hidden="true">{fs.viewed ? "✓" : ""}</span>
                 <button
                   type="button"
                   class="meta-name"
@@ -253,6 +274,12 @@
                 >
                   {baseName(path)}
                 </button>
+                {#if fs.adds + fs.dels > 0}
+                  <span class="fstats" aria-hidden="true">
+                    <b class="add">+{fs.adds}</b>
+                    <b class="del">−{fs.dels}</b>
+                  </span>
+                {/if}
                 {#if n > 0}
                   <button
                     type="button"
@@ -556,27 +583,65 @@
     background: var(--accent-hover);
   }
 
+  /* Section contents — carries the active section's accent rule */
   .meta {
     margin: 0;
-    padding: 0 0 4px;
+    padding: 3px 0 5px;
     list-style: none;
     background: var(--bg-inset);
     border-top: 1px solid var(--border);
+    box-shadow: inset 3px 0 0 var(--accent);
   }
 
   .meta li {
     display: flex;
     align-items: center;
-    gap: 4px;
-    min-height: 20px;
-    padding: 0 6px 0 0;
+    gap: 6px;
+    min-height: 22px;
+    padding: 0 6px 0 10px;
+  }
+
+  /* Per-file viewed tick — passive; the Files rail owns the checkbox */
+  .tick {
+    flex-shrink: 0;
+    width: 12px;
+    height: 12px;
+    border: 1px solid var(--border);
+    background: var(--bg-raised);
+    color: #fff;
+    font-size: 9px;
+    font-weight: 700;
+    line-height: 10px;
+    text-align: center;
+  }
+
+  .tick.done {
+    background: var(--selected);
+    border-color: var(--selected);
+  }
+
+  .fstats {
+    flex-shrink: 0;
+    font-family: var(--font-code);
+    font-size: 9px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  .fstats .add {
+    color: var(--selected);
+  }
+
+  .fstats .del {
+    color: var(--sev-critical);
   }
 
   .meta-name {
     flex: 1;
     min-width: 0;
     margin: 0;
-    padding: 2px 8px;
+    padding: 2px 4px;
     overflow: hidden;
     border: 0;
     border-radius: 0;

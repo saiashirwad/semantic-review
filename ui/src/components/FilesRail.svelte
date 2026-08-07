@@ -207,7 +207,10 @@
             <span class="meta" aria-hidden="true">
               {#if row.file.adds > 0}<b class="add">+{row.file.adds}</b>{/if}
               {#if row.file.dels > 0}<b class="del">−{row.file.dels}</b>{/if}
-              <span class="status" data-status={row.file.status}>{statusLetter(row.file)}</span>
+              <!-- Only surprising statuses get a letter; A/M are already told by the counts -->
+              {#if row.file.status === "deleted" || row.file.status === "renamed"}
+                <span class="status" data-status={row.file.status}>{statusLetter(row.file)}</span>
+              {/if}
             </span>
           </button>
         </li>
@@ -409,6 +412,15 @@
     min-height: 26px;
     /* Align files under dirs: check sits where dir has only twist */
     padding: 1px 8px 1px calc(8px + var(--d, 0) * 12px);
+    /* Indent guides — one hairline per depth level, painted in the indent gutter */
+    background-image: repeating-linear-gradient(
+      to right,
+      transparent 0 11px,
+      color-mix(in srgb, var(--border) 16%, transparent) 11px 12px
+    );
+    background-repeat: no-repeat;
+    background-position: 8px 0;
+    background-size: calc(var(--d, 0) * 12px) 100%;
   }
 
   .row.file {
@@ -417,7 +429,7 @@
   }
 
   .row:hover {
-    background: var(--bg-hover);
+    background-color: var(--bg-hover);
   }
 
   .row .main:active {

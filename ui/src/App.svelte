@@ -174,6 +174,10 @@
     <FilesRail />
     <main>
       <div class="masthead" bind:this={mastheadEl}>
+        <p class="mast-kicker">
+          <span class="mast-brand" aria-hidden="true"></span>
+          Semantic review
+        </p>
         <h1 class="mast-title">{payload.title}</h1>
         <div class="double-rule" aria-hidden="true">
           <div class="rule thick"></div>
@@ -182,12 +186,14 @@
         <p class="mast-stats">
           {#if payload.meta?.headRef && payload.meta?.baseRef}
             <span class="mast-refs">{payload.meta.headRef} → {payload.meta.baseRef}</span>
-            <span class="mast-sep">·</span>
           {/if}
-          +{stats.added} −{stats.removed} · {payload.files.length} files · {review.hunkOrder.length} hunks
+          <span class="mast-nums">
+            <b class="add">+{stats.added}</b>
+            <b class="del">−{stats.removed}</b>
+          </span>
+          <span>{payload.files.length} files · {review.hunkOrder.length} hunks</span>
           {#if payload.meta?.linked?.length}
-            <span class="mast-sep">·</span>
-            <span class="mast-linked">{payload.meta.linked.join(" · ")}</span>
+            <span class="mast-issue">{payload.meta.linked.join(" · ")}</span>
           {/if}
         </p>
       </div>
@@ -322,7 +328,31 @@
     border-bottom-width: 2px;
   }
 
+  /* Newspaper masthead: kicker → headline → double rule → dateline */
+  .mast-kicker {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 6px;
+    color: var(--fg-faint);
+    font-size: var(--fs-xs);
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+
+  .mast-brand {
+    width: 10px;
+    height: 10px;
+    border: 2px solid var(--border);
+    background: var(--accent);
+  }
+
   .mast-stats {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 14px;
     margin: 0;
     color: var(--fg-muted);
     font-family: var(--font-code);
@@ -331,19 +361,28 @@
   }
 
   .mast-refs {
-    padding: 1px 6px;
+    padding: 1px 8px;
     border: 1px solid var(--border);
     background: var(--bg-inset);
     font-weight: 600;
   }
 
-  .mast-sep {
-    color: var(--fg-faint);
+  .mast-nums .add {
+    color: var(--selected);
+    font-weight: 700;
   }
 
-  .mast-linked {
+  .mast-nums .del {
+    color: var(--sev-critical);
+    font-weight: 700;
+  }
+
+  .mast-issue {
+    padding: 1px 8px;
+    border: 1px solid var(--accent);
+    background: var(--accent-soft);
     color: var(--accent);
-    font-weight: 600;
+    font-weight: 700;
   }
 
   .tldr {
