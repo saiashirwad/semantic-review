@@ -11,7 +11,66 @@ import {
 } from "@pierre/diffs";
 import { preloadDiffHTML } from "@pierre/diffs/ssr";
 import { neobrutalTheme, CODE_THEME_NAME } from "./code-theme.ts";
+import { palette as p } from "./palette.ts";
 import type { DiffFile, Hunk } from "./diff.ts";
+
+function dedupeByHex(
+  entries: ReadonlyArray<[hex: string, cssVar: string]>,
+): ReadonlyArray<[string, string]> {
+  const seen = new Set<string>();
+  const out: [string, string][] = [];
+  for (const e of entries) {
+    const key = e[0].toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(e);
+  }
+  return out;
+}
+
+/**
+ * Shiki bakes theme colors as inline hex, which would pin the diffs to one
+ * theme. Rewrite every known palette hex to a CSS variable (fallback = the
+ * baked hex) so PAPER/INK can restyle pre-rendered HTML. 8-digit alpha forms
+ * come first; the (?![0-9a-f]) guard keeps 6-digit patterns off their prefixes.
+ */
+const CODE_COLOR_VARS = dedupeByHex([
+  [`${p.addBg}88`, "--add-word"],
+  [`${p.delBg}88`, "--del-word"],
+  ["#221f1a", "--code-linehl"],
+  [p.codeBg, "--bg-code"],
+  [p.codeFg, "--fg-code"],
+  [p.addBg, "--add-bg"],
+  [p.delBg, "--del-bg"],
+  [p.addRow, "--add-row"],
+  [p.delRow, "--del-row"],
+  [p.addFg, "--add-fg"],
+  [p.delFg, "--del-fg"],
+  [p.keyword, "--code-keyword"],
+  [p.string, "--code-literal"],
+  [p.number, "--code-literal"],
+  [p.function, "--code-function"],
+  [p.escape, "--code-function"],
+  [p.type, "--code-type"],
+  [p.support, "--code-type"],
+  [p.component, "--code-type"],
+  [p.property, "--code-property"],
+  [p.tag, "--code-tag"],
+  [p.regex, "--code-regex"],
+  [p.invalid, "--code-invalid"],
+  [p.codeMuted, "--code-muted"],
+  [p.codeFaint, "--code-faint"],
+  [p.codePunct, "--code-punct"],
+  [p.codeLine, "--code-line"],
+]);
+
+export function varifyCodeColors(html: string): string {
+  let out = html;
+  for (const [hex, cssVar] of CODE_COLOR_VARS) {
+    out = out.replace(new RegExp(`${hex}(?![0-9a-fA-F])`, "gi"), `var(${cssVar},${hex})`);
+  }
+  return out;
+}
 
 let themeRegistered = false;
 
@@ -131,7 +190,7 @@ export async function renderPierreDiffs(files: DiffFile[]): Promise<PierreRender
   const collect = (html: string): string => {
     const { body, styles } = stripChrome(html);
     for (const s of styles) styleSet.add(s);
-    return body;
+    return varifyCodeColors(body);
   };
 
   for (const file of files) {
@@ -162,7 +221,7 @@ export async function renderPierreDiffs(files: DiffFile[]): Promise<PierreRender
   }
 
   return {
-    css: [...styleSet].join("\n"),
+    css: varifyCodeColors([...styleSet].join("\n")),
     filesUnified,
     filesSplit,
     hunksUnified,

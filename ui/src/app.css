@@ -1,7 +1,7 @@
 /* ─────────────────────────────────────────────────────────────
  * NEUBRUTALIST REVIEW UI
  *
- * IBM Plex Sans for chrome. IBM Plex Mono for code only.
+ * IBM Plex Sans for chrome. JetBrains Mono for code only.
  * High contrast, zero radius, thick borders, hard offset
  * shadows. Flat color. Offline-embedded fonts.
  * ───────────────────────────────────────────────────────────── */
@@ -35,31 +35,12 @@
   font-display: block;
 }
 
+/* Code face: JetBrains Mono (variable, 100-800) — taller x-height and clearer
+   glyphs than Plex Mono at diff sizes. One woff2 covers every weight. */
 @font-face {
-  font-family: "IBM Plex Mono";
-  src: url("./assets/fonts/IBMPlexMono-400.woff") format("woff");
-  font-weight: 400;
-  font-style: normal;
-  font-display: block;
-}
-@font-face {
-  font-family: "IBM Plex Mono";
-  src: url("./assets/fonts/IBMPlexMono-500.woff") format("woff");
-  font-weight: 500;
-  font-style: normal;
-  font-display: block;
-}
-@font-face {
-  font-family: "IBM Plex Mono";
-  src: url("./assets/fonts/IBMPlexMono-600.woff") format("woff");
-  font-weight: 600;
-  font-style: normal;
-  font-display: block;
-}
-@font-face {
-  font-family: "IBM Plex Mono";
-  src: url("./assets/fonts/IBMPlexMono-700.woff") format("woff");
-  font-weight: 700;
+  font-family: "JetBrains Mono";
+  src: url("./assets/fonts/JetBrainsMono-Var.woff2") format("woff2");
+  font-weight: 100 800;
   font-style: normal;
   font-display: block;
 }
@@ -78,11 +59,12 @@
   --bg-inset: #e8e2d6; /* palette.inset */
   --bg-hover: #ddd5c6;
   --bg-panel: #fff8ec; /* palette.panel */
-  --bg-code: #171512; /* palette.codeBg */
+  /* PAPER code surfaces: dark-on-cream — see palette.codeLight */
+  --bg-code: #fbf8f1;
   --fg: #0a0a0a; /* palette.ink */
   --fg-muted: #2e2e2e; /* palette.inkMuted */
   --fg-faint: #5c5c5c; /* palette.inkFaint */
-  --fg-code: #f7f1e6; /* palette.codeFg */
+  --fg-code: #2a2620;
   --border: #0a0a0a;
   --border-soft: #0a0a0a;
   --border-w: 2px;
@@ -103,13 +85,30 @@
   --selected-soft: #c6f0dd;
   --selected-fg: #064032;
 
-  --add-bg: #152a1e; /* palette.addBg */
-  --del-bg: #2b1613; /* palette.delBg */
-  --add-fg: #34d399; /* palette.addFg */
-  --del-fg: #fb7185; /* palette.delFg */
+  --add-bg: #d9ecd7;
+  --del-bg: #f6d9d2;
+  --add-fg: #1f8a4c;
+  --del-fg: #cf3f36;
   /* Quiet row washes — syntax tokens stay dominant */
-  --add-row: #1c231b; /* palette.addRow */
-  --del-row: #271916; /* palette.delRow */
+  --add-row: #eaf3e6;
+  --del-row: #f9ebe6;
+  --add-word: #bfe3c6;
+  --del-word: #f3c9c0;
+
+  /* Syntax roles on light code (palette.codeLight) */
+  --code-keyword: #d64500;
+  --code-literal: #2e7d4f;
+  --code-function: #9c7000;
+  --code-type: #1c7ed6;
+  --code-property: #57534a;
+  --code-tag: #c25200;
+  --code-regex: #b34840;
+  --code-invalid: #d92020;
+  --code-muted: #6f695e;
+  --code-faint: #948c7e;
+  --code-punct: #7d766a;
+  --code-line: #b0a89a;
+  --code-linehl: #efe9dc;
 
   --sev-critical: #e03131; /* palette.sevCritical */
   --sev-major: #f54e00; /* palette.sevMajor */
@@ -125,7 +124,7 @@
   --font-ui: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-label: "IBM Plex Sans", system-ui, sans-serif;
   --font-display: "IBM Plex Sans", system-ui, sans-serif;
-  --font-code: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  --font-code: "JetBrains Mono", ui-monospace, Menlo, monospace;
 
   /* Type scale — slightly airier for long reading */
   --fs-xs: 11px;
@@ -200,6 +199,21 @@
     --del-row: #271916;
     --add-fg: #34d399;
     --del-fg: #fb7185;
+    --add-word: #152a1e88;
+    --del-word: #2b161388;
+    --code-keyword: #ff6a2b;
+    --code-literal: #86c7a2;
+    --code-function: #f0c14a;
+    --code-type: #7cc0ee;
+    --code-property: #d9d2c2;
+    --code-tag: #ff8450;
+    --code-regex: #e78f8f;
+    --code-invalid: #ff5c5c;
+    --code-muted: #a8a194;
+    --code-faint: #7a7368;
+    --code-punct: #8a8378;
+    --code-line: #5c564c;
+    --code-linehl: #221f1a;
 
     --sev-critical: #ff5c5c;
     --sev-major: #ff6a2b;
@@ -252,6 +266,21 @@
   --del-row: #271916;
   --add-fg: #34d399;
   --del-fg: #fb7185;
+  --add-word: #152a1e88;
+  --del-word: #2b161388;
+  --code-keyword: #ff6a2b;
+  --code-literal: #86c7a2;
+  --code-function: #f0c14a;
+  --code-type: #7cc0ee;
+  --code-property: #d9d2c2;
+  --code-tag: #ff8450;
+  --code-regex: #e78f8f;
+  --code-invalid: #ff5c5c;
+  --code-muted: #a8a194;
+  --code-faint: #7a7368;
+  --code-punct: #8a8378;
+  --code-line: #5c564c;
+  --code-linehl: #221f1a;
 
   --sev-critical: #ff5c5c;
   --sev-major: #ff6a2b;
@@ -279,11 +308,11 @@
   --bg-inset: #e8e2d6;
   --bg-hover: #ddd5c6;
   --bg-panel: #fff8ec;
-  --bg-code: #171512;
+  --bg-code: #fbf8f1;
   --fg: #0a0a0a;
   --fg-muted: #2e2e2e;
   --fg-faint: #5c5c5c;
-  --fg-code: #f7f1e6;
+  --fg-code: #2a2620;
   --border: #0a0a0a;
   --border-soft: #0a0a0a;
 
@@ -299,10 +328,25 @@
   --selected-soft: #c6f0dd;
   --selected-fg: #064032;
 
-  --add-row: #1c231b;
-  --del-row: #271916;
-  --add-fg: #34d399;
-  --del-fg: #fb7185;
+  --add-row: #eaf3e6;
+  --del-row: #f9ebe6;
+  --add-fg: #1f8a4c;
+  --del-fg: #cf3f36;
+  --add-word: #bfe3c6;
+  --del-word: #f3c9c0;
+  --code-keyword: #d64500;
+  --code-literal: #2e7d4f;
+  --code-function: #9c7000;
+  --code-type: #1c7ed6;
+  --code-property: #57534a;
+  --code-tag: #c25200;
+  --code-regex: #b34840;
+  --code-invalid: #d92020;
+  --code-muted: #6f695e;
+  --code-faint: #948c7e;
+  --code-punct: #7d766a;
+  --code-line: #b0a89a;
+  --code-linehl: #efe9dc;
 
   --sev-critical: #e03131;
   --sev-major: #f54e00;

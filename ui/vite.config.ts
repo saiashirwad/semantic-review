@@ -49,6 +49,8 @@ export default defineConfig({
     outDir: "../dist/ui",
     emptyOutDir: true,
     cssCodeSplit: false,
-    assetsInlineLimit: 100_000,
+    /* Everything must inline into the offline bundle — the JetBrains Mono
+       variable woff2 alone is ~114 KB. */
+    assetsInlineLimit: 300_000,
   },
 });

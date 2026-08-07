@@ -15,9 +15,9 @@
   display: block;
   overflow: auto;
   border: 0;
-  background: var(--bg-code, #0c0c0c);
-  color: var(--fg-code, #f7f1e6);
-  color-scheme: dark;
+  background: var(--bg-code);
+  color: var(--fg-code);
+  /* follows the active theme (light code on PAPER, dark on INK) */
   font-family: var(--font-code);
   font-size: 13px;
   line-height: 1.55;
@@ -26,9 +26,9 @@
   --diffs-font-family: var(--font-code);
   --diffs-font-size: 13px;
   --diffs-line-height: 1.55;
-  --diffs-bg: #0c0c0c;
-  --diffs-fg: #f7f1e6;
-  --diffs-fg-number: color-mix(in srgb, #f7f1e6 38%, #0c0c0c);
+  --diffs-bg: var(--bg-code);
+  --diffs-fg: var(--fg-code);
+  --diffs-fg-number: color-mix(in srgb, var(--fg-code) 38%, var(--bg-code));
   /* Slightly brighter token rendering on dark ink */
   -webkit-font-smoothing: antialiased;
 }
@@ -124,12 +124,12 @@
 /* Line tints — very quiet; syntax carries the signal */
 .pierre-host [data-line-type="change-addition"],
 .pierre-host [data-line-type*="addition"] {
-  background: color-mix(in srgb, var(--add-fg) 7%, #0c0c0c) !important;
+  background: var(--add-row) !important;
 }
 
 .pierre-host [data-line-type="change-deletion"],
 .pierre-host [data-line-type*="deletion"] {
-  background: color-mix(in srgb, var(--del-fg) 8%, #0c0c0c) !important;
+  background: var(--del-row) !important;
 }
 
 .pierre-host [data-line-type="context"],
@@ -191,7 +191,7 @@
 
 .pierre-host [data-separator],
 .pierre-host [data-hunk-separator] {
-  background: #0a0a0a !important;
+  background: var(--code-linehl) !important;
   color: color-mix(in srgb, var(--fg-code) 55%, transparent) !important;
   border-block: 1px solid color-mix(in srgb, var(--fg-code) 14%, transparent) !important;
   font-family: var(--font-code) !important;

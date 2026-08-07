@@ -245,14 +245,18 @@
     outline-offset: 0;
   }
 
+  /* File-tab bar stays ink in BOTH themes — pin its text; it must not
+     follow --fg-code (which is dark on the PAPER code surface). */
   .head {
+    --head-fg: #f2ede3;
     display: flex;
     align-items: center;
     gap: 8px;
     min-height: 28px;
     padding: 0 10px;
     border-bottom: 1px solid color-mix(in srgb, var(--fg-code) 12%, transparent);
-    background: #0c0c0c;
+    background: #141210;
+    color: var(--head-fg);
     font-family: var(--font-code);
     font-size: 12px;
   }
@@ -260,12 +264,11 @@
   .hunk.embedded .head {
     min-height: 26px;
     padding: 0 10px;
-    background: #0c0c0c;
     border-bottom-color: color-mix(in srgb, var(--fg-code) 10%, transparent);
   }
 
   .path {
-    color: var(--fg-code);
+    color: var(--head-fg);
     font-weight: 600;
     letter-spacing: -0.01em;
   }
@@ -285,7 +288,7 @@
 
   .header {
     overflow: hidden;
-    color: color-mix(in srgb, var(--fg-code) 42%, transparent);
+    color: color-mix(in srgb, var(--head-fg) 45%, transparent);
     font-size: 11px;
     font-weight: 500;
     text-overflow: ellipsis;
@@ -293,7 +296,7 @@
   }
 
   .header.solo {
-    color: color-mix(in srgb, var(--fg-code) 55%, transparent);
+    color: color-mix(in srgb, var(--head-fg) 60%, transparent);
     font-weight: 500;
   }
 
@@ -312,7 +315,7 @@
     padding: 5px 12px;
     border: 0;
     border-bottom: 1px solid color-mix(in srgb, var(--fg-code) 12%, transparent);
-    background: #1a1a1a;
+    background: color-mix(in srgb, var(--fg-code) 6%, var(--bg-code));
     color: var(--add-fg);
     font-size: var(--fs-xs);
     font-weight: 600;
@@ -325,7 +328,7 @@
   }
 
   .expand:hover {
-    background: #222;
+    background: color-mix(in srgb, var(--fg-code) 11%, var(--bg-code));
   }
 
   table.diff {
@@ -357,7 +360,7 @@
     width: 1%;
     padding: 0 1px 0 18px;
     border-right: 1px solid color-mix(in srgb, var(--fg-code) 10%, transparent);
-    background: #0c0c0c;
+    background: var(--bg-code);
     color: color-mix(in srgb, var(--fg-code) 38%, transparent);
     font-size: 11px;
     font-variant-numeric: tabular-nums;
@@ -391,15 +394,15 @@
   }
 
   .gutter.add {
-    background: color-mix(in srgb, var(--add-row) 70%, #0c0c0c);
+    background: color-mix(in srgb, var(--add-row) 70%, var(--bg-code));
   }
 
   .gutter.del {
-    background: color-mix(in srgb, var(--del-row) 70%, #0c0c0c);
+    background: color-mix(in srgb, var(--del-row) 70%, var(--bg-code));
   }
 
   .gutter.spacer {
-    background: #0a0a0a;
+    background: var(--bg-code);
   }
 
   .c {
@@ -417,11 +420,11 @@
   }
 
   .c.add {
-    background: color-mix(in srgb, var(--add-fg) 7%, #0c0c0c);
+    background: var(--add-row);
   }
 
   .c.del {
-    background: color-mix(in srgb, var(--del-fg) 8%, #0c0c0c);
+    background: var(--del-row);
   }
 
   .c.flagged {
@@ -429,37 +432,37 @@
   }
 
   .c.spacer {
-    background: #0a0a0a;
+    background: var(--bg-code);
   }
 
   table:not(.split) tr:has(.c.add) .gutter,
   table:not(.split) tr:has(.c.add) .c {
-    background: color-mix(in srgb, var(--add-fg) 7%, #0c0c0c);
+    background: var(--add-row);
   }
 
   table:not(.split) tr:has(.c.del) .gutter,
   table:not(.split) tr:has(.c.del) .c {
-    background: color-mix(in srgb, var(--del-fg) 8%, #0c0c0c);
+    background: var(--del-row);
   }
 
   table:not(.split) tr:has(.c.add) .gutter {
-    background: color-mix(in srgb, var(--add-fg) 7%, #0c0c0c);
+    background: var(--add-row);
   }
 
   table:not(.split) tr:has(.c.del) .gutter {
-    background: color-mix(in srgb, var(--del-fg) 8%, #0c0c0c);
+    background: var(--del-row);
   }
 
   tr:hover .c:not(.spacer) {
-    background: #161616;
+    background: var(--code-linehl);
   }
 
   tr:hover .c.add {
-    background: color-mix(in srgb, var(--add-fg) 12%, #161616);
+    background: color-mix(in srgb, var(--add-fg) 14%, var(--code-linehl));
   }
 
   tr:hover .c.del {
-    background: color-mix(in srgb, var(--del-fg) 12%, #161616);
+    background: color-mix(in srgb, var(--del-fg) 14%, var(--code-linehl));
   }
 
   .lc {

@@ -174,10 +174,6 @@
     <FilesRail />
     <main>
       <div class="masthead" bind:this={mastheadEl}>
-        <p class="mast-kicker">
-          <span class="mast-brand" aria-hidden="true"></span>
-          Semantic review
-        </p>
         <h1 class="mast-title">{payload.title}</h1>
         <div class="double-rule" aria-hidden="true">
           <div class="rule thick"></div>
@@ -328,26 +324,7 @@
     border-bottom-width: 2px;
   }
 
-  /* Newspaper masthead: kicker → headline → double rule → dateline */
-  .mast-kicker {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin: 0 0 6px;
-    color: var(--fg-faint);
-    font-size: var(--fs-xs);
-    font-weight: 700;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-  }
-
-  .mast-brand {
-    width: 10px;
-    height: 10px;
-    border: 2px solid var(--border);
-    background: var(--accent);
-  }
-
+  /* Newspaper masthead: headline → double rule → dateline */
   .mast-stats {
     display: flex;
     flex-wrap: wrap;

@@ -7,6 +7,8 @@
   const review = getReviewState();
 
   let findingsOpen = $state(true);
+  let commentsOpen = $state(true);
+  let overallOpen = $state(true);
   let copied = $state(false);
   let copyTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -93,12 +95,25 @@
         <span class="notes-arrow">↓</span>
       </button>
     {/if}
-    <h3>Comments</h3>
-    <CommentsList />
+    <button type="button" class="sec-head" onclick={() => (commentsOpen = !commentsOpen)}>
+      <span class="sec-label">Comments</span>
+      {#if review.comments.length > 0}
+        <span class="sec-count">{review.comments.length}</span>
+      {/if}
+      <span class="chevron" class:open={commentsOpen}>▸</span>
+    </button>
+    {#if commentsOpen}
+      <CommentsList />
+    {/if}
   </div>
   <footer class="rail-foot">
-    <h3>Overall</h3>
-    <OverallBox />
+    <button type="button" class="sec-head" onclick={() => (overallOpen = !overallOpen)}>
+      <span class="sec-label">Overall</span>
+      <span class="chevron" class:open={overallOpen}>▸</span>
+    </button>
+    {#if overallOpen}
+      <OverallBox />
+    {/if}
   </footer>
 </aside>
 
@@ -362,17 +377,50 @@
     color: var(--accent);
   }
 
-  h3 {
+  /* Collapsible section headers — Comments / Overall */
+  .sec-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
     margin: 0;
     padding: 8px 10px 6px;
+    border: 0;
     border-bottom: 1px solid var(--border);
     background: var(--bg-inset);
+    cursor: pointer;
+  }
+
+  .sec-head:hover {
+    background: var(--bg-hover);
+  }
+
+  .sec-label {
+    flex: 1;
     color: var(--fg);
     font-size: var(--fs-xs);
     font-weight: 700;
     letter-spacing: 0.1em;
     text-transform: uppercase;
     line-height: var(--lh-tight);
+    text-align: left;
+  }
+
+  .sec-count {
+    min-width: 16px;
+    padding: 0 4px;
+    border: 1px solid var(--border);
+    background: var(--bg-raised);
+    color: var(--fg);
+    font-family: var(--font-code);
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 14px;
+    text-align: center;
+  }
+
+  .sec-head:hover .chevron {
+    color: var(--accent);
   }
 
 </style>

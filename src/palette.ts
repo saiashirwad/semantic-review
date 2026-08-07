@@ -71,4 +71,36 @@ export const palette = {
   diagramBorder: "#2a2a2a",
 } as const;
 
+/**
+ * PAPER-theme code surfaces: dark-on-cream. The palette above holds the INK
+ * (dark) code set; pierre-render rewrites baked hexes to var(--code-*) so
+ * app.css can swap between the two. Mirror these in app.css :root and
+ * [data-theme="light"].
+ */
+export const codeLight = {
+  bg: "#fbf8f1",
+  fg: "#2a2620",
+  keyword: "#d64500",
+  literal: "#2e7d4f",
+  function: "#9c7000",
+  type: "#1c7ed6",
+  property: "#57534a",
+  tag: "#c25200",
+  regex: "#b34840",
+  invalid: "#d92020",
+  muted: "#6f695e",
+  faint: "#948c7e",
+  punct: "#7d766a",
+  line: "#b0a89a",
+  lineHighlight: "#efe9dc",
+  addRow: "#eaf3e6",
+  delRow: "#f9ebe6",
+  addBg: "#d9ecd7",
+  delBg: "#f6d9d2",
+  addFg: "#1f8a4c",
+  delFg: "#cf3f36",
+  addWord: "#bfe3c6",
+  delWord: "#f3c9c0",
+} as const;
+
 export type Palette = typeof palette;
